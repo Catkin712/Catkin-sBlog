@@ -1,0 +1,52 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+const pageTitle = "关于Catk1ns";
+
+const identity = {
+    firstName: "Willow_Catkin",
+    country: "加拿大",
+    occupation: "学生",
+    hobbies: ["摄影", "观鸟", "棒球"],
+    ages: 18,
+    birth: "7-12",
+};
+
+const skills = [
+    "核心框架：Astro v7.0.3",
+    "样式：原生 CSS",
+    "语言：TypeScript",
+    "包管理：npm",
+    "代码托管：GitHub",
+    "线上部署：Netlify",
+];
+// Welcome to Astro! Wondering what to do next? Check out the Astro documentation at https://docs.astro.build
+// Don't want to use any of this? Delete everything in this file, the `assets`, `components`, and `layouts` directories, and start fresh.
+---
+
+<BaseLayout pageTitle={pageTitle}>
+    <h2>这是一个个人内容站</h2>
+
+    <p>以下是关于catkin'sblog的几个事实：</p>
+    <ul>
+        <li>1暂时由netlify线上部署</li>
+        <li>2代码托管于github</li>
+        <li>3这个站点目前接入了简单的响应式布局：只针对菜单</li>
+    </ul>
+    <p>技术栈</p>
+    <ul>
+        {skills.map((skill) => <li class="skill">{skill}</li>)}
+    </ul>
+</BaseLayout>
+
+<body>
+    <style>
+        h1 {
+            color: purple;
+            font-size: 4rem;
+        }
+        .skill {
+            color: green;
+            font-weight: bold;
+        }
+    </style>
+</body>
