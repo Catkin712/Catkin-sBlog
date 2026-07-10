@@ -1,8 +1,13 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
-const pageTitle = "Catkin'sBlog";
+import Greeting from "../components/Greeting.jsx";
+const pageTitle = "Catkin's Blog";
 ---
 
 <BaseLayout pageTitle={pageTitle}>
 	<h2>From 2026.6.30 V1.0.0</h2>
+	<Greeting
+		client:load
+		messages={["catk1n", "iygv", "maize", "zhizhiwang", "colds1de"]}
+	/>
 </BaseLayout>
