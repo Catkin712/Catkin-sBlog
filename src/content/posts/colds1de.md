@@ -7,7 +7,7 @@ image:
     url: "/covers/colds1de.jpg"
     alt: "Colds1de的测试文章"
 tags: []
-draft: true
+draft: false
 ---
 
 现在是7月12日下午 躺在床上刷视频的colds1de突然收到了catkin的消息
