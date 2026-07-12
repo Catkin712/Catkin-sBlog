@@ -1,6 +1,6 @@
 ---
 title: "catkin的一个测试文章"
-pubDate: 2026-06-30
+pubDate: 1970-01-01
 description: "这是 Catkin Astro 博客的第一篇文章。"
 author: "catkin"
 image:
