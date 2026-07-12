@@ -1,6 +1,8 @@
 ---
 const { post } = Astro.props;
-const pubDate = post.data.pubDate.toISOString().slice(0, 10);
+const rawDate = post.data.pubDate;
+const pubDate =
+    rawDate instanceof Date ? rawDate.toISOString().slice(0, 10) : String(rawDate).slice(0, 10);
 const postUrl = `/posts/${post.id}/`;
 const coverUrl = post.data.image?.url ?? "/defaultCover.png";
 const coverAlt = post.data.image?.alt ?? `${post.data.title} 的文章封面`;

@@ -10,12 +10,14 @@
     "admin": "node scripts/admin-server.mjs",
     "build": "astro build",
     "preview": "astro preview",
+    "pages:dev": "npm run build && npx wrangler pages dev dist",
+    "pages:deploy": "npm run build && npx wrangler pages deploy dist",
     "astro": "astro"
   },
   "dependencies": {
     "@astrojs/preact": "^6.0.1",
-    "@astrojs/rss": "^4.0.19",
     "astro": "^7.0.3",
+    "marked": "^18.0.6",
     "preact": "^10.29.7"
   }
 }

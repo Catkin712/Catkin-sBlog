@@ -10,15 +10,12 @@ loadEnvFile(path.join(projectRoot, ".env"));
 loadEnvFile(path.join(projectRoot, ".env.local"));
 const host = process.env.ADMIN_HOST ?? "127.0.0.1";
 const port = Number(process.env.ADMIN_PORT ?? 8787);
-const isNetlifyRuntime =
-    process.env.NETLIFY === "true" ||
-    Boolean(process.env.CONTEXT) ||
-    Boolean(process.env.AWS_LAMBDA_FUNCTION_NAME);
-const adminUsername = process.env.ADMIN_USERNAME ?? (isNetlifyRuntime ? "" : "catkin");
-const adminPassword = process.env.ADMIN_PASSWORD ?? (isNetlifyRuntime ? "" : "catkin123");
+const isHostedRuntime = Boolean(process.env.CF_PAGES) || Boolean(process.env.CONTEXT);
+const adminUsername = process.env.ADMIN_USERNAME ?? (isHostedRuntime ? "" : "catkin");
+const adminPassword = process.env.ADMIN_PASSWORD ?? (isHostedRuntime ? "" : "catkin123");
 const adminAccounts = getAdminAccounts();
 const sessionSecret =
-    process.env.ADMIN_SESSION_SECRET ?? (isNetlifyRuntime ? "" : "catkin-dev-session-secret");
+    process.env.ADMIN_SESSION_SECRET ?? (isHostedRuntime ? "" : "catkin-dev-session-secret");
 const adminConfigError = getAdminConfigError();
 const sessionMaxAge = 60 * 60 * 24 * 7;
 
@@ -418,7 +415,7 @@ const adminHtml = String.raw`<!doctype html>
             <div class="toolbar">
                 <button id="logout" type="button">退出</button>
                 <button id="refreshPosts" type="button">刷新</button>
-                <button id="buildSite" type="button" class="primary">触发构建</button>
+                <button id="buildSite" type="button" class="primary">刷新文章</button>
             </div>
         </header>
         <div class="layout">
@@ -708,11 +705,14 @@ const adminHtml = String.raw`<!doctype html>
 
             const buildSite = async () => {
                 els.output.style.display = "block";
-                els.output.textContent = "正在触发 Netlify 构建...";
-                setStatus("正在触发构建。");
-                const result = await requestJson("/api/build", { method: "POST", body: "{}" });
-                els.output.textContent = result.output;
-                setStatus(result.ok ? "构建已触发。" : "构建触发失败，请查看输出。");
+                els.output.textContent = "正在刷新 GitHub 文章数据...";
+                setStatus("正在刷新文章数据。");
+                await loadPosts();
+                if (currentSlug) {
+                    await loadPost(currentSlug);
+                }
+                els.output.textContent = "文章列表已刷新，前台无需重新部署。";
+                setStatus("文章数据已刷新。");
             };
 
             const renderPostList = () => {
@@ -1053,7 +1053,7 @@ function getAdminConfigError() {
         return "";
     }
 
-    return `缺少后台登录环境变量：${[...new Set(missing)].join(", ")}。请在 Netlify 的 Environment variables 中配置后重新部署。`;
+    return `缺少后台登录环境变量：${[...new Set(missing)].join(", ")}。请在 Cloudflare Pages 的 Environment variables 中配置后重新部署。`;
 }
 
 async function listPosts() {
@@ -1265,21 +1265,9 @@ function serializeMarkdown(post) {
 }
 
 async function runBuild() {
-    const hookUrl = process.env.NETLIFY_BUILD_HOOK_URL;
-    if (!hookUrl) {
-        return {
-            ok: true,
-            output:
-                "未配置 NETLIFY_BUILD_HOOK_URL。保存文章会提交到 GitHub；如果 Netlify 已连接该仓库，通常会自动触发构建。",
-        };
-    }
-
-    const response = await fetch(hookUrl, { method: "POST" });
     return {
-        ok: response.ok,
-        output: response.ok
-            ? "已触发 Netlify 构建。"
-            : `Netlify Build Hook 返回 ${response.status}。`,
+        ok: true,
+        output: "当前站点已改为运行时读取文章，不需要重新部署。",
     };
 }
 
@@ -1298,7 +1286,7 @@ function getGitHubConfig() {
 
     if (missing.length > 0) {
         throw new Error(
-            `缺少 GitHub 环境变量：${missing.join(", ")}。文章列表、读取和保存文章需要这些变量；请在 Netlify 的 Environment variables 中配置后重新部署。`,
+            `缺少 GitHub 环境变量：${missing.join(", ")}。文章列表、读取和保存文章需要这些变量；请在 Cloudflare Pages 的 Environment variables 中配置后重新部署。`,
         );
     }
 
