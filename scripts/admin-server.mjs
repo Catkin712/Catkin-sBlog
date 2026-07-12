@@ -10,10 +10,16 @@ loadEnvFile(path.join(projectRoot, ".env"));
 loadEnvFile(path.join(projectRoot, ".env.local"));
 const host = process.env.ADMIN_HOST ?? "127.0.0.1";
 const port = Number(process.env.ADMIN_PORT ?? 8787);
-const adminUsername = process.env.ADMIN_USERNAME ?? "catkin";
-const adminPassword = process.env.ADMIN_PASSWORD ?? "catkin123";
+const isNetlifyRuntime =
+    process.env.NETLIFY === "true" ||
+    Boolean(process.env.CONTEXT) ||
+    Boolean(process.env.AWS_LAMBDA_FUNCTION_NAME);
+const adminUsername = process.env.ADMIN_USERNAME ?? (isNetlifyRuntime ? "" : "catkin");
+const adminPassword = process.env.ADMIN_PASSWORD ?? (isNetlifyRuntime ? "" : "catkin123");
 const adminAccounts = getAdminAccounts();
-const sessionSecret = process.env.ADMIN_SESSION_SECRET ?? "catkin-dev-session-secret";
+const sessionSecret =
+    process.env.ADMIN_SESSION_SECRET ?? (isNetlifyRuntime ? "" : "catkin-dev-session-secret");
+const adminConfigError = getAdminConfigError();
 const sessionMaxAge = 60 * 60 * 24 * 7;
 
 const loginHtml = String.raw`<!doctype html>
@@ -765,6 +771,10 @@ export async function handleAdminRequest(request) {
         }
 
         if (request.method === "POST" && url.pathname === "/api/login") {
+            if (adminConfigError) {
+                return jsonResponse(500, { error: adminConfigError });
+            }
+
             const payload = await readJson(request);
             const account = adminAccounts.find(
                 (item) =>
@@ -999,15 +1009,17 @@ function sign(payload) {
 }
 
 function getAdminAccounts() {
-    const accounts = [
-        {
+    const accounts = [];
+
+    if (adminUsername && adminPassword) {
+        accounts.push({
             username: adminUsername,
             password: adminPassword,
-        },
-    ];
+        });
+    }
 
     const extraUsers = process.env.ADMIN_EXTRA_USERS ?? "";
-    for (const pair of extraUsers.split(",")) {
+    for (const pair of extraUsers.split(/[\n,]+/)) {
         const trimmed = pair.trim();
         if (!trimmed) {
             continue;
@@ -1026,6 +1038,22 @@ function getAdminAccounts() {
     }
 
     return accounts;
+}
+
+function getAdminConfigError() {
+    const missing = [];
+    if (!adminUsername || !adminPassword) {
+        missing.push("ADMIN_USERNAME", "ADMIN_PASSWORD");
+    }
+    if (!sessionSecret) {
+        missing.push("ADMIN_SESSION_SECRET");
+    }
+
+    if (missing.length === 0 && adminAccounts.length > 0) {
+        return "";
+    }
+
+    return `缺少后台登录环境变量：${[...new Set(missing)].join(", ")}。请在 Netlify 的 Environment variables 中配置后重新部署。`;
 }
 
 async function listPosts() {
@@ -1269,7 +1297,9 @@ function getGitHubConfig() {
         .map(([name]) => name);
 
     if (missing.length > 0) {
-        throw new Error(`缺少 GitHub 环境变量：${missing.join(", ")}`);
+        throw new Error(
+            `缺少 GitHub 环境变量：${missing.join(", ")}。文章列表、读取和保存文章需要这些变量；请在 Netlify 的 Environment variables 中配置后重新部署。`,
+        );
     }
 
     return { token, owner, repo, branch };

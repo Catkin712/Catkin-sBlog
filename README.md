@@ -30,7 +30,7 @@ npm run admin
 
 打开 `http://127.0.0.1:8787` 后，可以新建或编辑 Markdown 文章。保存草稿会写入 `draft: true`，发布会写入 `draft: false`。
 
-后台登录支持环境变量 `ADMIN_USERNAME`、`ADMIN_PASSWORD`、`ADMIN_EXTRA_USERS` 和 `ADMIN_SESSION_SECRET`，默认用户名和密码分别是 `catkin` 和 `catkin123`。`ADMIN_EXTRA_USERS` 使用 `username:password` 格式，多个账号用英文逗号分隔。
+后台登录支持环境变量 `ADMIN_USERNAME`、`ADMIN_PASSWORD`、`ADMIN_EXTRA_USERS` 和 `ADMIN_SESSION_SECRET`。本地开发未配置环境变量时，会使用 `catkin` / `catkin123` 作为开发默认账号；Netlify 线上环境必须显式配置账号密码，不会使用开发默认账号。`ADMIN_EXTRA_USERS` 使用 `username:password` 格式，多个账号用英文逗号或换行分隔。
 本地开发可以直接写入 `.env.local`，`npm run admin` 会自动读取。
 
 ## Netlify 后台
@@ -40,7 +40,7 @@ npm run admin
 
 - `ADMIN_USERNAME`
 - `ADMIN_PASSWORD`
-- `ADMIN_EXTRA_USERS`
+- `ADMIN_EXTRA_USERS`，用于第二套及更多账号，例如 `username:password`
 - `ADMIN_SESSION_SECRET`
 - `GITHUB_TOKEN`
 - `GITHUB_OWNER`
