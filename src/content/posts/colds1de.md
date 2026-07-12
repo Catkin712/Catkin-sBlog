@@ -7,7 +7,7 @@ image:
     url: "/covers/colds1de.jpg"
     alt: "Colds1de的测试文章"
 tags: []
-draft: true
+draft: false
 ---
 
 现在是7月12日下午 躺在床上刷视频的colds1de突然收到了catkin的消息
@@ -22,4 +22,4 @@ draft: true
 分割线也不能用 这什么垃圾网站啊！
 我再试一下链接
 [超链接测试](https://space.bilibili.com/1630188527spm_id_from=333.337.0.0）
-ok这个也用不了
+ok这个也用不了 你在干什么catkin...
