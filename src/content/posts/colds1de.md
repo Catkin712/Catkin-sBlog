@@ -7,7 +7,7 @@ image:
     url: "/covers/colds1de.jpg"
     alt: "Colds1de的测试文章"
 tags: []
-draft: false
+draft: true
 ---
 
 现在是7月12日下午 躺在床上刷视频的colds1de突然收到了catkin的消息
@@ -27,3 +27,8 @@ ok这个也用不了 你在干什么catkin...
 ![BQACAgUAAyEGAASHRsPbAAEXDatqU03p2C9KscW7CPwriQWSaEPA0AACbiEAAnbMoFZBweuKZ6DPIzwE.png](https://img.remit.ee/api/file/BQACAgUAAyEGAASHRsPbAAEXDatqU03p2C9KscW7CPwriQWSaEPA0AACbiEAAnbMoFZBweuKZ6DPIzwE.png)
 
 ok图片也用不了
+
+现在是7月12日晚上21:50
+catkin大人不知道怎么把bug修了一下下
+附上原版效果
+![BQACAgUAAyEGAASHRsPbAAEXEJ1qU5vyychtLIVLzRK2GHrWs-4s4AACPx4AApZHoFbjCsPkYWhO8TwE.png](https://img.remit.ee/api/file/BQACAgUAAyEGAASHRsPbAAEXEJ1qU5vyychtLIVLzRK2GHrWs-4s4AACPx4AApZHoFbjCsPkYWhO8TwE.png)
