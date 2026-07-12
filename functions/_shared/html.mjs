@@ -1,8 +1,5 @@
-import {
-    formatPostDate,
-    getPublishedTags,
-    publicPostSummary,
-} from "./blog.mjs";
+import { adminEditorScript, adminEditorStyles, adminMarkdownToolbar } from "./admin-editor.mjs";
+import { formatPostDate, getPublishedTags, publicPostSummary } from "./blog.mjs";
 
 const siteName = "Catkin's Blog";
 const defaultDescription = "Catkin's Blog 是一个记录技术学习、生活观察和个人内容的轻量博客。";
@@ -255,6 +252,7 @@ export function renderAdminPage() {
             label { display: grid; gap: 0.3rem; font-weight: 700; }
             input, textarea { width: 100%; border: 1px solid #d9dee7; border-radius: 6px; padding: 0.6rem; }
             textarea { min-height: 360px; resize: vertical; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
+${adminEditorStyles}
             .span-2 { grid-column: 1 / -1; }
             .actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
             #status { color: #687386; }
@@ -285,7 +283,11 @@ export function renderAdminPage() {
                     <label class="span-2">封面 URL<input id="imageUrl" /></label>
                     <label>上传封面<input id="imageFile" type="file" accept="image/png,image/jpeg,image/webp,image/gif" /></label>
                     <label>封面描述<input id="imageAlt" /></label>
-                    <label class="span-2">正文<textarea id="body" required></textarea></label>
+                    <div class="markdown-editor span-2">
+                        <label for="body">正文</label>
+${adminMarkdownToolbar}
+                        <textarea id="body" required></textarea>
+                    </div>
                     <div class="span-2 actions">
                         <button id="saveDraft" type="button">保存草稿</button>
                         <button id="publishPost" class="primary" type="button">发布文章</button>
@@ -394,6 +396,9 @@ export function renderAdminPage() {
             document.querySelector("#saveDraft").addEventListener("click", () => save(true).catch((error) => setStatus(error.message)));
             document.querySelector("#publishPost").addEventListener("click", () => save(false).catch((error) => setStatus(error.message)));
             loadPosts().then(() => posts[0] ? loadPost(posts[0].slug) : newPost()).catch((error) => setStatus(error.message));
+        </script>
+        <script>
+${adminEditorScript}
         </script>
     </body>
 </html>`;

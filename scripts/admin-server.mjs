@@ -3,6 +3,7 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { adminEditorScript, adminEditorStyles, adminMarkdownToolbar } from "../functions/_shared/admin-editor.mjs";
 
 const modulePath = fileURLToPath(import.meta.url);
 const projectRoot = path.resolve(path.dirname(modulePath), "..");
@@ -383,6 +384,8 @@ const adminHtml = String.raw`<!doctype html>
                 font-size: 0.875rem;
             }
 
+${adminEditorStyles}
+
             .status {
                 min-height: 1.5rem;
                 color: var(--muted);
@@ -470,10 +473,11 @@ const adminHtml = String.raw`<!doctype html>
                         </label>
                     </div>
                     <div class="editor-grid">
-                        <label>
-                            Markdown
+                        <div class="markdown-editor">
+                            <label for="body">Markdown</label>
+${adminMarkdownToolbar}
                             <textarea id="body" name="body" required></textarea>
-                        </label>
+                        </div>
                         <section>
                             <p class="hint">预览</p>
                             <article id="preview" class="preview"></article>
@@ -758,6 +762,9 @@ const adminHtml = String.raw`<!doctype html>
                     newPost();
                 })
                 .catch((error) => setStatus(error.message));
+        </script>
+        <script>
+${adminEditorScript}
         </script>
     </body>
 </html>`;
