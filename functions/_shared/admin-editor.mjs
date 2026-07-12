@@ -19,13 +19,22 @@ export const adminMarkdownToolbar = String.raw`<div class="markdown-toolbar" rol
 export const adminEditorStyles = String.raw`
             .markdown-editor {
                 display: grid;
-                gap: 0.45rem;
+                gap: 0.7rem;
+                min-width: 0;
+                padding: 0.9rem;
+                border: 1px solid var(--line);
+                border-radius: 10px;
+                background: #ffffff;
             }
 
             .markdown-editor > label {
                 display: inline-flex;
                 align-items: center;
                 gap: 0.4rem;
+                margin: 0;
+                color: var(--muted);
+                font-size: 0.875rem;
+                font-weight: 700;
             }
 
             .markdown-toolbar {
@@ -54,6 +63,12 @@ export const adminEditorStyles = String.raw`
                 font: inherit;
             }
 
+            .markdown-editor textarea {
+                min-width: 0;
+                min-height: 34rem;
+                resize: vertical;
+            }
+
             .toolbar-separator {
                 width: 1px;
                 background: var(--line);
@@ -62,14 +77,19 @@ export const adminEditorStyles = String.raw`
 
             .editor-grid {
                 display: grid;
-                grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-                gap: 1rem;
+                grid-template-columns: minmax(0, 1.08fr) minmax(320px, 0.92fr);
+                gap: 1.1rem;
                 align-items: start;
             }
 
             .preview-panel {
                 display: grid;
                 gap: 0.45rem;
+                min-width: 0;
+                padding: 0.9rem;
+                border: 1px solid var(--line);
+                border-radius: 10px;
+                background: #ffffff;
             }
 
             .preview-panel > p {
@@ -80,10 +100,13 @@ export const adminEditorStyles = String.raw`
             }
 
             .preview {
-                min-height: 460px;
+                min-height: 34rem;
+                max-height: 72vh;
+                overflow: auto;
                 overflow-wrap: anywhere;
                 line-height: 1.85;
                 font-size: 0.98rem;
+                padding-right: 0.25rem;
             }
 
             .preview h1,
@@ -211,6 +234,11 @@ export const adminEditorStyles = String.raw`
             @media (max-width: 920px) {
                 .editor-grid {
                     grid-template-columns: 1fr;
+                }
+
+                .markdown-editor,
+                .preview-panel {
+                    padding: 0.8rem;
                 }
             }
 `;
