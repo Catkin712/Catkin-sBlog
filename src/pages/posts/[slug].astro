@@ -16,29 +16,32 @@ export async function getStaticPaths() {
 const { post } = Astro.props;
 const { Content } = await render(post);
 const pubDate = post.data.pubDate.toISOString().slice(0, 10);
-const coverUrl = post.data.image?.url;
+const coverUrl = post.data.image?.url ?? "/defaultCover.png";
+const coverAlt = post.data.image?.alt ?? `${post.data.title} 的文章封面`;
 ---
 
-<BaseLayout pageTitle={post.data.title} description={post.data.description}>
+<BaseLayout
+    pageTitle={post.data.title}
+    description={post.data.description}
+    showPageTitle={false}
+>
     <article class="article-page">
         <header class="article-header">
-            <h2>{post.data.title}</h2>
-            <p class="article-description">{post.data.description}</p>
-            <div class="article-meta">
-                <span>作者：{post.data.author}</span>
-                <time datetime={post.data.pubDate.toISOString()}>{pubDate}</time>
+            <div class="article-heading">
+                <h1>{post.data.title}</h1>
+                <p class="article-description">{post.data.description}</p>
+                <div class="article-meta">
+                    <span>作者：{post.data.author}</span>
+                    <time datetime={post.data.pubDate.toISOString()}>{pubDate}</time>
+                </div>
             </div>
+            <img
+                class="article-cover"
+                src={coverUrl}
+                alt={coverAlt}
+                loading="lazy"
+            />
         </header>
-
-        {
-            coverUrl && (
-                <img
-                    class="article-cover"
-                    src={coverUrl}
-                    alt={post.data.image?.alt ?? post.data.title}
-                />
-            )
-        }
 
         <div class="article-content">
             <Content />
@@ -62,11 +65,6 @@ const coverUrl = post.data.image?.url;
 </BaseLayout>
 
 <style>
-    :global(.article-page ~ h1),
-    :global(.site-main > h1) {
-        display: none;
-    }
-
     .article-page {
         border: 1px solid var(--line-color);
         border-radius: 8px;
@@ -75,11 +73,20 @@ const coverUrl = post.data.image?.url;
     }
 
     .article-header {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 180px;
+        gap: 1.25rem;
+        align-items: start;
         padding-bottom: 1.25rem;
         border-bottom: 1px solid var(--line-color);
     }
 
-    .article-header h2 {
+    .article-heading {
+        display: grid;
+        gap: 0.65rem;
+    }
+
+    .article-header h1 {
         margin: 0;
         overflow-wrap: anywhere;
         font-size: clamp(1.75rem, 4vw, 2.45rem);
@@ -88,7 +95,7 @@ const coverUrl = post.data.image?.url;
     }
 
     .article-description {
-        margin: 0.75rem 0 0;
+        margin: 0;
         color: var(--muted-color);
         font-size: 1rem;
         line-height: 1.7;
@@ -106,8 +113,9 @@ const coverUrl = post.data.image?.url;
     .article-cover {
         display: block;
         width: 100%;
-        max-height: 360px;
-        margin-top: 1.25rem;
+        aspect-ratio: 4 / 3;
+        max-width: 180px;
+        justify-self: end;
         border-radius: 8px;
         object-fit: cover;
         background: var(--page-bg);
@@ -177,6 +185,16 @@ const coverUrl = post.data.image?.url;
     @media screen and (max-width: 560px) {
         .article-page {
             padding: 1rem;
+        }
+
+        .article-header {
+            grid-template-columns: 1fr;
+        }
+
+        .article-cover {
+            max-width: none;
+            justify-self: start;
+            width: 100%;
         }
     }
 </style>

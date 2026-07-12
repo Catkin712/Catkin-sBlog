@@ -28,7 +28,27 @@
 npm run admin
 ```
 
-打开 `http://127.0.0.1:8787` 后，可以新建或编辑 Markdown 文章。保存草稿会写入 `draft: true`，发布会写入 `draft: false`，后台里的“构建检查”会运行 `npm run build`。
+打开 `http://127.0.0.1:8787` 后，可以新建或编辑 Markdown 文章。保存草稿会写入 `draft: true`，发布会写入 `draft: false`。
+
+后台登录支持环境变量 `ADMIN_USERNAME`、`ADMIN_PASSWORD`、`ADMIN_EXTRA_USERS` 和 `ADMIN_SESSION_SECRET`，默认用户名和密码分别是 `catkin` 和 `catkin123`。`ADMIN_EXTRA_USERS` 使用 `username:password` 格式，多个账号用英文逗号分隔。
+本地开发可以直接写入 `.env.local`，`npm run admin` 会自动读取。
+
+## Netlify 后台
+后台已拆为 Netlify Functions，线上入口为 `/admin`，API 路由为 `/api/login`、`/api/logout`、`/api/posts`、`/api/posts/:slug` 和 `/api/build`。
+
+保存文章会通过 GitHub Contents API 提交到仓库，因此需要在 Netlify 环境变量中配置：
+
+- `ADMIN_USERNAME`
+- `ADMIN_PASSWORD`
+- `ADMIN_EXTRA_USERS`
+- `ADMIN_SESSION_SECRET`
+- `GITHUB_TOKEN`
+- `GITHUB_OWNER`
+- `GITHUB_REPO`
+- `GITHUB_BRANCH`，默认 `main`
+- `NETLIFY_BUILD_HOOK_URL`，可选；未配置时依赖 GitHub 提交自动触发 Netlify 构建
+
+`GITHUB_TOKEN` 需要有目标仓库 contents 读写权限。
 
 ## 本地开发运行
 环境要求：Node.js 22.12.0 及以上版本

@@ -1,17 +1,170 @@
-import { execFile } from "node:child_process";
 import { createServer } from "node:http";
-import { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
+import { createHmac, timingSafeEqual } from "node:crypto";
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const projectRoot = path.resolve(__dirname, "..");
-const postsDir = path.join(projectRoot, "src", "content", "posts");
-const coversDir = path.join(projectRoot, "public", "covers");
+const modulePath = fileURLToPath(import.meta.url);
+const projectRoot = path.resolve(path.dirname(modulePath), "..");
+loadEnvFile(path.join(projectRoot, ".env"));
+loadEnvFile(path.join(projectRoot, ".env.local"));
 const host = process.env.ADMIN_HOST ?? "127.0.0.1";
 const port = Number(process.env.ADMIN_PORT ?? 8787);
+const adminUsername = process.env.ADMIN_USERNAME ?? "catkin";
+const adminPassword = process.env.ADMIN_PASSWORD ?? "catkin123";
+const adminAccounts = getAdminAccounts();
+const sessionSecret = process.env.ADMIN_SESSION_SECRET ?? "catkin-dev-session-secret";
+const sessionMaxAge = 60 * 60 * 24 * 7;
 
-const html = String.raw`<!doctype html>
+const loginHtml = String.raw`<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Catkin's Blog Admin Login</title>
+        <style>
+            :root {
+                color-scheme: light;
+                --bg: #f6f7f9;
+                --panel: #ffffff;
+                --line: #d9dee7;
+                --text: #20242c;
+                --muted: #687386;
+                --brand: #216869;
+                --brand-strong: #154c4d;
+            }
+
+            * {
+                box-sizing: border-box;
+            }
+
+            body {
+                margin: 0;
+                min-height: 100vh;
+                display: grid;
+                place-items: center;
+                background: var(--bg);
+                color: var(--text);
+                font-family:
+                    ui-sans-serif,
+                    system-ui,
+                    -apple-system,
+                    BlinkMacSystemFont,
+                    "Segoe UI",
+                    sans-serif;
+            }
+
+            .login-panel {
+                width: min(420px, calc(100vw - 2rem));
+                border: 1px solid var(--line);
+                border-radius: 8px;
+                background: var(--panel);
+                padding: 1.5rem;
+            }
+
+            h1 {
+                margin: 0 0 0.35rem;
+                font-size: 1.25rem;
+            }
+
+            p {
+                margin: 0 0 1rem;
+                color: var(--muted);
+                font-size: 0.92rem;
+            }
+
+            form {
+                display: grid;
+                gap: 0.75rem;
+            }
+
+            label {
+                display: grid;
+                gap: 0.35rem;
+                font-size: 0.92rem;
+                font-weight: 700;
+            }
+
+            input,
+            button {
+                font: inherit;
+            }
+
+            input {
+                border: 1px solid var(--line);
+                border-radius: 6px;
+                padding: 0.65rem 0.75rem;
+            }
+
+            button {
+                border: 1px solid var(--brand);
+                border-radius: 6px;
+                background: var(--brand);
+                color: #fff;
+                padding: 0.65rem 0.75rem;
+                cursor: pointer;
+            }
+
+            button:hover {
+                background: var(--brand-strong);
+            }
+
+            .status {
+                min-height: 1.2rem;
+                color: var(--muted);
+                font-size: 0.85rem;
+            }
+        </style>
+    </head>
+    <body>
+        <section class="login-panel">
+            <h1>Catkin's Blog Admin</h1>
+            <p>请输入管理员账号密码。</p>
+            <form id="loginForm">
+                <label>
+                    用户名
+                    <input id="username" name="username" autocomplete="username" required />
+                </label>
+                <label>
+                    密码
+                    <input id="password" name="password" type="password" autocomplete="current-password" required />
+                </label>
+                <button type="submit">登录</button>
+                <p id="status" class="status"></p>
+            </form>
+        </section>
+        <script>
+            const form = document.querySelector("#loginForm");
+            const status = document.querySelector("#status");
+
+            form?.addEventListener("submit", async (event) => {
+                event.preventDefault();
+                status.textContent = "正在登录...";
+
+                const payload = {
+                    username: document.querySelector("#username").value,
+                    password: document.querySelector("#password").value,
+                };
+
+                const response = await fetch("/api/login", {
+                    method: "POST",
+                    headers: { "content-type": "application/json" },
+                    body: JSON.stringify(payload),
+                });
+
+                if (!response.ok) {
+                    const result = await response.json();
+                    status.textContent = result.error ?? "登录失败";
+                    return;
+                }
+
+                window.location.reload();
+            });
+        </script>
+    </body>
+</html>`;
+
+const adminHtml = String.raw`<!doctype html>
 <html lang="zh-CN">
     <head>
         <meta charset="utf-8" />
@@ -257,8 +410,9 @@ const html = String.raw`<!doctype html>
         <header>
             <h1>Catkin's Blog Admin</h1>
             <div class="toolbar">
+                <button id="logout" type="button">退出</button>
                 <button id="refreshPosts" type="button">刷新</button>
-                <button id="buildSite" type="button" class="primary">构建检查</button>
+                <button id="buildSite" type="button" class="primary">触发构建</button>
             </div>
         </header>
         <div class="layout">
@@ -548,11 +702,11 @@ const html = String.raw`<!doctype html>
 
             const buildSite = async () => {
                 els.output.style.display = "block";
-                els.output.textContent = "正在运行 npm run build...";
-                setStatus("正在构建检查。");
+                els.output.textContent = "正在触发 Netlify 构建...";
+                setStatus("正在触发构建。");
                 const result = await requestJson("/api/build", { method: "POST", body: "{}" });
                 els.output.textContent = result.output;
-                setStatus(result.ok ? "构建通过。" : "构建失败，请查看输出。");
+                setStatus(result.ok ? "构建已触发。" : "构建触发失败，请查看输出。");
             };
 
             const renderPostList = () => {
@@ -581,6 +735,10 @@ const html = String.raw`<!doctype html>
             });
             els.body.addEventListener("input", refreshPreview);
             document.querySelector("#newPost").addEventListener("click", newPost);
+            document.querySelector("#logout").addEventListener("click", async () => {
+                await fetch("/api/logout", { method: "POST" });
+                window.location.reload();
+            });
             document.querySelector("#refreshPosts").addEventListener("click", loadPosts);
             document.querySelector("#saveDraft").addEventListener("click", () => save(true).catch((error) => setStatus(error.message)));
             document.querySelector("#publishPost").addEventListener("click", () => save(false).catch((error) => setStatus(error.message)));
@@ -598,78 +756,285 @@ const html = String.raw`<!doctype html>
     </body>
 </html>`;
 
-const server = createServer(async (request, response) => {
+export async function handleAdminRequest(request) {
     try {
-        const url = new URL(request.url ?? "/", `http://${request.headers.host}`);
+        const url = new URL(request.url);
 
-        if (request.method === "GET" && url.pathname === "/") {
-            send(response, 200, html, "text/html; charset=utf-8");
-            return;
+        if (request.method === "GET" && ["/", "/admin"].includes(url.pathname)) {
+            return htmlResponse(isAuthenticated(request) ? adminHtml : loginHtml);
+        }
+
+        if (request.method === "POST" && url.pathname === "/api/login") {
+            const payload = await readJson(request);
+            const account = adminAccounts.find(
+                (item) =>
+                    item.username === payload.username &&
+                    item.password === payload.password,
+            );
+            if (!account) {
+                return jsonResponse(401, { error: "用户名或密码错误" });
+            }
+
+            const token = createSessionToken(account.username);
+            return jsonResponse(200, { ok: true }, {
+                "set-cookie": buildSessionCookie(token),
+            });
+        }
+
+        if (request.method === "POST" && url.pathname === "/api/logout") {
+            return jsonResponse(200, { ok: true }, {
+                "set-cookie": buildExpiredSessionCookie(),
+            });
+        }
+
+        if (!isAuthenticated(request)) {
+            return jsonResponse(401, { error: "未登录" });
         }
 
         if (request.method === "GET" && url.pathname === "/api/posts") {
-            sendJson(response, 200, await listPosts());
-            return;
+            return jsonResponse(200, await listPosts());
         }
 
         const postMatch = /^\/api\/posts\/([^/]+)$/.exec(url.pathname);
         if (postMatch && request.method === "GET") {
-            sendJson(response, 200, await readPost(decodeURIComponent(postMatch[1])));
-            return;
+            return jsonResponse(200, await readPost(decodeURIComponent(postMatch[1])));
         }
 
         if (postMatch && request.method === "PUT") {
             const slug = decodeURIComponent(postMatch[1]);
             const payload = await readJson(request);
             await writePost(slug, payload);
-            sendJson(response, 200, { ok: true });
-            return;
+            return jsonResponse(200, { ok: true });
         }
 
         if (request.method === "POST" && url.pathname === "/api/build") {
-            sendJson(response, 200, await runBuild());
-            return;
+            return jsonResponse(200, await runBuild());
         }
 
-        sendJson(response, 404, { error: "Not found" });
+        return jsonResponse(404, { error: "Not found" });
     } catch (error) {
-        sendJson(response, 500, { error: error.message });
+        return jsonResponse(500, { error: error.message });
     }
-});
-
-server.listen(port, host, () => {
-    console.log(`Admin server running at http://${host}:${port}`);
-});
-
-function send(response, status, body, contentType) {
-    response.writeHead(status, {
-        "content-type": contentType,
-        "cache-control": "no-store",
-    });
-    response.end(body);
 }
 
-function sendJson(response, status, payload) {
-    send(response, status, JSON.stringify(payload), "application/json; charset=utf-8");
+if (process.argv[1] && path.resolve(process.argv[1]) === modulePath) {
+    const server = createServer(async (request, response) => {
+        const webRequest = await toWebRequest(request);
+        const webResponse = await handleAdminRequest(webRequest);
+        await sendNodeResponse(response, webResponse);
+    });
+
+    server.listen(port, host, () => {
+        console.log(`Admin server running at http://${host}:${port}`);
+    });
+}
+
+function htmlResponse(body) {
+    return new Response(body, {
+        status: 200,
+        headers: {
+            "content-type": "text/html; charset=utf-8",
+            "cache-control": "no-store",
+        },
+    });
+}
+
+function jsonResponse(status, payload, headers = {}) {
+    return new Response(JSON.stringify(payload), {
+        status,
+        headers: {
+            "content-type": "application/json; charset=utf-8",
+            "cache-control": "no-store",
+            ...headers,
+        },
+    });
+}
+
+async function toWebRequest(request) {
+    const requestHost = request.headers.host ?? `${host}:${port}`;
+    const url = `http://${requestHost}${request.url ?? "/"}`;
+    const headers = new Headers();
+    for (const [key, value] of Object.entries(request.headers)) {
+        if (Array.isArray(value)) {
+            for (const item of value) {
+                headers.append(key, item);
+            }
+        } else if (value !== undefined) {
+            headers.set(key, value);
+        }
+    }
+
+    const method = request.method ?? "GET";
+    if (["GET", "HEAD"].includes(method)) {
+        return new Request(url, { method, headers });
+    }
+
+    const body = await readNodeBody(request);
+    return new Request(url, {
+        method,
+        headers,
+        body,
+        duplex: "half",
+    });
+}
+
+function readNodeBody(request) {
+    return new Promise((resolve, reject) => {
+        const chunks = [];
+        request.on("data", (chunk) => chunks.push(chunk));
+        request.on("end", () => resolve(Buffer.concat(chunks)));
+        request.on("error", reject);
+    });
+}
+
+async function sendNodeResponse(response, webResponse) {
+    response.statusCode = webResponse.status;
+    webResponse.headers.forEach((value, key) => {
+        response.setHeader(key, value);
+    });
+    response.end(Buffer.from(await webResponse.arrayBuffer()));
 }
 
 async function readJson(request) {
-    let body = "";
-    for await (const chunk of request) {
-        body += chunk;
-        if (body.length > 8_000_000) {
-            throw new Error("请求内容过大");
-        }
+    const body = await request.text();
+    if (body.length > 8_000_000) {
+        throw new Error("请求内容过大");
     }
     return body ? JSON.parse(body) : {};
 }
 
+function getSessionToken(request) {
+    const cookieHeader = request.headers.get("cookie") ?? "";
+    const cookie = cookieHeader
+        .split(";")
+        .map((part) => part.trim())
+        .find((part) => part.startsWith("admin_session="));
+    return cookie ? decodeURIComponent(cookie.split("=").slice(1).join("=")) : "";
+}
+
+function isAuthenticated(request) {
+    const token = getSessionToken(request);
+    return Boolean(token && verifySessionToken(token));
+}
+
+function buildSessionCookie(token) {
+    return `admin_session=${encodeURIComponent(token)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${sessionMaxAge}`;
+}
+
+function buildExpiredSessionCookie() {
+    return "admin_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0";
+}
+
+function loadEnvFile(filePath) {
+    if (!existsSync(filePath)) {
+        return;
+    }
+
+    const lines = readFileSync(filePath, "utf8").split(/\r?\n/);
+    for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed || trimmed.startsWith("#")) {
+            continue;
+        }
+
+        const index = trimmed.indexOf("=");
+        if (index === -1) {
+            continue;
+        }
+
+        const key = trimmed.slice(0, index).trim();
+        let value = trimmed.slice(index + 1).trim();
+        if (
+            (value.startsWith('"') && value.endsWith('"')) ||
+            (value.startsWith("'") && value.endsWith("'"))
+        ) {
+            value = value.slice(1, -1);
+        }
+
+        if (!process.env[key] && key) {
+            process.env[key] = value;
+        }
+    }
+}
+
+function createSessionToken(username) {
+    const payload = Buffer.from(
+        JSON.stringify({
+            username,
+            exp: Date.now() + sessionMaxAge * 1000,
+        }),
+    ).toString("base64url");
+    return `${payload}.${sign(payload)}`;
+}
+
+function verifySessionToken(token) {
+    const [payload, signature] = token.split(".");
+    if (!payload || !signature) {
+        return false;
+    }
+
+    const expected = sign(payload);
+    const signatureBuffer = Buffer.from(signature);
+    const expectedBuffer = Buffer.from(expected);
+    if (
+        signatureBuffer.length !== expectedBuffer.length ||
+        !timingSafeEqual(signatureBuffer, expectedBuffer)
+    ) {
+        return false;
+    }
+
+    try {
+        const data = JSON.parse(Buffer.from(payload, "base64url").toString("utf8"));
+        return (
+            adminAccounts.some((account) => account.username === data.username) &&
+            Number(data.exp) > Date.now()
+        );
+    } catch {
+        return false;
+    }
+}
+
+function sign(payload) {
+    return createHmac("sha256", sessionSecret).update(payload).digest("base64url");
+}
+
+function getAdminAccounts() {
+    const accounts = [
+        {
+            username: adminUsername,
+            password: adminPassword,
+        },
+    ];
+
+    const extraUsers = process.env.ADMIN_EXTRA_USERS ?? "";
+    for (const pair of extraUsers.split(",")) {
+        const trimmed = pair.trim();
+        if (!trimmed) {
+            continue;
+        }
+
+        const separatorIndex = trimmed.indexOf(":");
+        if (separatorIndex === -1) {
+            continue;
+        }
+
+        const username = trimmed.slice(0, separatorIndex).trim();
+        const password = trimmed.slice(separatorIndex + 1).trim();
+        if (username && password) {
+            accounts.push({ username, password });
+        }
+    }
+
+    return accounts;
+}
+
 async function listPosts() {
-    await mkdir(postsDir, { recursive: true });
-    const files = (await readdir(postsDir)).filter((file) => file.endsWith(".md"));
+    const files = await listGitHubDirectory("src/content/posts");
     const posts = await Promise.all(
-        files.map(async (file) => {
-            const slug = file.replace(/\.md$/, "");
+        files
+            .filter((file) => file.type === "file" && file.name.endsWith(".md"))
+            .map(async (file) => {
+            const slug = file.name.replace(/\.md$/, "");
             const post = await readPost(slug);
             return {
                 slug,
@@ -688,8 +1053,7 @@ async function listPosts() {
 
 async function readPost(slug) {
     assertSlug(slug);
-    const file = path.join(postsDir, `${slug}.md`);
-    const markdown = await readFile(file, "utf8");
+    const markdown = await readGitHubTextFile(`src/content/posts/${slug}.md`);
     const { data, body } = parseMarkdown(markdown);
     return { slug, data, body };
 }
@@ -704,8 +1068,11 @@ async function writePost(slug, payload) {
     if (payload.imageUpload?.base64) {
         post.image = await saveCover(slug, payload.imageUpload, payload.imageAlt || post.title);
     }
-    await mkdir(postsDir, { recursive: true });
-    await writeFile(path.join(postsDir, `${slug}.md`), serializeMarkdown(post), "utf8");
+    await writeGitHubTextFile(
+        `src/content/posts/${slug}.md`,
+        serializeMarkdown(post),
+        `content: ${post.draft ? "save draft" : "publish"} ${slug}`,
+    );
 }
 
 function assertSlug(slug) {
@@ -765,9 +1132,12 @@ async function saveCover(slug, upload, alt) {
         throw new Error("封面图片不能超过 5MB");
     }
 
-    await mkdir(coversDir, { recursive: true });
     const fileName = `${slug}.${extension}`;
-    await writeFile(path.join(coversDir, fileName), buffer);
+    await writeGitHubBase64File(
+        `public/covers/${fileName}`,
+        buffer.toString("base64"),
+        `content: update cover for ${slug}`,
+    );
     return {
         url: `/covers/${fileName}`,
         alt: String(alt ?? "").trim() || slug,
@@ -866,23 +1236,126 @@ function serializeMarkdown(post) {
     return lines.join("\n");
 }
 
-function runBuild() {
-    return new Promise((resolve) => {
-        const command = process.platform === "win32" ? "npm.cmd" : "npm";
-        execFile(
-            command,
-            ["run", "build"],
-            {
-                cwd: projectRoot,
-                shell: process.platform === "win32",
-                timeout: 120_000,
+async function runBuild() {
+    const hookUrl = process.env.NETLIFY_BUILD_HOOK_URL;
+    if (!hookUrl) {
+        return {
+            ok: true,
+            output:
+                "未配置 NETLIFY_BUILD_HOOK_URL。保存文章会提交到 GitHub；如果 Netlify 已连接该仓库，通常会自动触发构建。",
+        };
+    }
+
+    const response = await fetch(hookUrl, { method: "POST" });
+    return {
+        ok: response.ok,
+        output: response.ok
+            ? "已触发 Netlify 构建。"
+            : `Netlify Build Hook 返回 ${response.status}。`,
+    };
+}
+
+function getGitHubConfig() {
+    const token = process.env.GITHUB_TOKEN;
+    const owner = process.env.GITHUB_OWNER;
+    const repo = process.env.GITHUB_REPO;
+    const branch = process.env.GITHUB_BRANCH ?? "main";
+    const missing = [
+        ["GITHUB_TOKEN", token],
+        ["GITHUB_OWNER", owner],
+        ["GITHUB_REPO", repo],
+    ]
+        .filter(([, value]) => !value)
+        .map(([name]) => name);
+
+    if (missing.length > 0) {
+        throw new Error(`缺少 GitHub 环境变量：${missing.join(", ")}`);
+    }
+
+    return { token, owner, repo, branch };
+}
+
+async function githubRequest(apiPath, options = {}) {
+    const { token, owner, repo } = getGitHubConfig();
+    let response;
+    try {
+        response = await fetch(`https://api.github.com/repos/${owner}/${repo}${apiPath}`, {
+            ...options,
+            headers: {
+                accept: "application/vnd.github+json",
+                authorization: `Bearer ${token}`,
+                "content-type": "application/json",
+                "user-agent": "catkins-blog-admin",
+                "x-github-api-version": "2022-11-28",
+                ...(options.headers ?? {}),
             },
-            (error, stdout, stderr) => {
-                resolve({
-                    ok: !error,
-                    output: `${stdout}${stderr}`,
-                });
-            },
-        );
+        });
+    } catch (error) {
+        throw new Error(`GitHub API 请求失败：${error.cause?.message ?? error.message}`);
+    }
+
+    if (response.status === 404 && options.allowMissing) {
+        return null;
+    }
+
+    const text = await response.text();
+    const payload = text ? JSON.parse(text) : null;
+    if (!response.ok) {
+        throw new Error(payload?.message ?? `GitHub API 返回 ${response.status}`);
+    }
+    return payload;
+}
+
+function encodeRepoPath(repoPath) {
+    return repoPath.split("/").map(encodeURIComponent).join("/");
+}
+
+async function listGitHubDirectory(repoPath) {
+    const { branch } = getGitHubConfig();
+    return await githubRequest(
+        `/contents/${encodeRepoPath(repoPath)}?ref=${encodeURIComponent(branch)}`,
+    );
+}
+
+async function getGitHubContent(repoPath) {
+    const { branch } = getGitHubConfig();
+    return await githubRequest(
+        `/contents/${encodeRepoPath(repoPath)}?ref=${encodeURIComponent(branch)}`,
+        { allowMissing: true },
+    );
+}
+
+async function readGitHubTextFile(repoPath) {
+    const file = await getGitHubContent(repoPath);
+    if (!file?.content) {
+        throw new Error(`GitHub 中不存在 ${repoPath}`);
+    }
+    return Buffer.from(file.content.replace(/\n/g, ""), "base64").toString("utf8");
+}
+
+async function writeGitHubTextFile(repoPath, content, message) {
+    await writeGitHubBase64File(
+        repoPath,
+        Buffer.from(content, "utf8").toString("base64"),
+        message,
+    );
+}
+
+async function writeGitHubBase64File(repoPath, base64Content, message) {
+    const { branch } = getGitHubConfig();
+    const existing = await getGitHubContent(repoPath);
+    const body = {
+        message,
+        content: base64Content,
+        branch,
+    };
+
+    if (existing?.sha) {
+        body.sha = existing.sha;
+    }
+
+    await githubRequest(`/contents/${encodeRepoPath(repoPath)}`, {
+        method: "PUT",
+        body: JSON.stringify(body),
     });
 }

@@ -5,6 +5,7 @@ import "../style/global.css";
 const {
     pageTitle,
     description = "Catkin's Blog 是一个记录技术学习、生活观察和个人内容的轻量博客。",
+    showPageTitle = true,
 } = Astro.props;
 ---
 
@@ -22,7 +23,7 @@ const {
         <div class="site-shell">
             <Header />
             <main class="site-main">
-                <h1>{pageTitle}</h1>
+                {showPageTitle && <h1>{pageTitle}</h1>}
                 <slot />
                 <Footer />
             </main>
