@@ -3,7 +3,7 @@ title: "catkin18岁啦~"
 pubDate: 2026-07-12
 description: "祝18岁的catkin生日快乐"
 author: "catkin"
-category: "未分类"
+category: "杂谈"
 image:
     url: "/covers/catkin18.jpg"
     alt: "catkin18岁啦~"
