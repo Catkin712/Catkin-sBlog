@@ -2,7 +2,9 @@
 const { post } = Astro.props;
 const rawDate = post.data.pubDate;
 const pubDate =
-    rawDate instanceof Date ? rawDate.toISOString().slice(0, 10) : String(rawDate).slice(0, 10);
+    rawDate instanceof Date
+        ? rawDate.toISOString().slice(0, 10)
+        : String(rawDate).slice(0, 10);
 const postUrl = `/posts/${post.id}/`;
 const coverUrl = post.data.image?.url ?? "/defaultCover.png";
 const coverAlt = post.data.image?.alt ?? `${post.data.title} 的文章封面`;
@@ -11,7 +13,12 @@ const category = post.data.category?.trim() || "未分类";
 
 <article class="post-card">
     <a class="post-card-link" href={postUrl}>
-        <img class="post-card-cover" src={coverUrl} alt={coverAlt} loading="lazy" />
+        <img
+            class="post-card-cover"
+            src={coverUrl}
+            alt={coverAlt}
+            loading="lazy"
+        />
         <div class="post-card-body">
             <div class="post-card-meta">
                 <span>{pubDate}</span>
@@ -24,7 +31,7 @@ const category = post.data.category?.trim() || "未分类";
     </a>
     <div class="post-card-tags" aria-label="文章标签">
         {
-            post.data.tags.map((tag) => (
+            post.data.tags.map((tag: string) => (
                 <a href={`/tags/${encodeURIComponent(tag)}/`}>{tag}</a>
             ))
         }
@@ -71,7 +78,6 @@ const category = post.data.category?.trim() || "未分类";
         color: var(--muted-color);
         font-size: 0.85rem;
     }
-
 
     .post-card h2 {
         margin: 0;
