@@ -75,6 +75,7 @@ export async function listAdminPosts(env) {
             author: post.data.author,
             category: post.data.category,
             tags: post.data.tags,
+            featured: post.data.featured,
             draft: post.data.draft,
         }))
         .sort((a, b) => String(b.pubDate).localeCompare(String(a.pubDate)));
@@ -157,7 +158,7 @@ function parseMarkdown(markdown) {
 }
 
 function parseFrontmatter(frontmatter) {
-    const data = { tags: [], draft: false, category: "未分类" };
+    const data = { tags: [], featured: false, draft: false, category: "未分类" };
     const lines = frontmatter.split(/\r?\n/);
 
     for (let i = 0; i < lines.length; i += 1) {
@@ -192,6 +193,7 @@ function parseFrontmatter(frontmatter) {
         category: normalizeCategory(data.category),
         image: data.image,
         tags: Array.isArray(data.tags) ? data.tags.map(String) : [],
+        featured: Boolean(data.featured),
         draft: Boolean(data.draft),
     };
 }
@@ -233,6 +235,7 @@ function normalizePost(payload) {
         tags: Array.isArray(payload.tags)
             ? payload.tags.map((tag) => String(tag).trim()).filter(Boolean)
             : [],
+        featured: Boolean(payload.featured),
         draft: Boolean(payload.draft),
         body: String(payload.body).replace(/\s+$/, ""),
     };
@@ -298,6 +301,7 @@ function serializeMarkdown(post) {
     }
 
     lines.push(`tags: ${JSON.stringify(post.tags)}`);
+    lines.push(`featured: ${post.featured}`);
     lines.push(`draft: ${post.draft}`);
     lines.push("---", "", post.body, "");
     return lines.join("\n");

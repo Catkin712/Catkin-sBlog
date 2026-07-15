@@ -332,6 +332,17 @@ const adminHtml = String.raw`<!doctype html>
                 font-weight: 700;
             }
 
+            label.checkbox-label {
+                display: inline-flex;
+                gap: 0.45rem;
+                align-items: center;
+                justify-self: start;
+            }
+
+            label.checkbox-label input {
+                width: auto;
+            }
+
             input,
             textarea {
                 width: 100%;
@@ -467,6 +478,10 @@ ${adminEditorStyles}
                             <input id="tags" name="tags" placeholder="astro, blog" />
                             <span>用英文逗号分隔</span>
                         </label>
+                        <label class="checkbox-label">
+                            精选文章
+                            <input id="featured" name="featured" type="checkbox" />
+                        </label>
                         <label>
                             封面 URL
                             <input id="imageUrl" name="imageUrl" />
@@ -517,6 +532,7 @@ ${adminMarkdownToolbar}
                 category: document.querySelector("#category"),
                 categoryOptions: document.querySelector("#categoryOptions"),
                 tags: document.querySelector("#tags"),
+                featured: document.querySelector("#featured"),
                 imageUrl: document.querySelector("#imageUrl"),
                 imageFile: document.querySelector("#imageFile"),
                 imageAlt: document.querySelector("#imageAlt"),
@@ -640,6 +656,7 @@ ${adminMarkdownToolbar}
                 els.author.value = post.data.author ?? "catkin";
                 els.category.value = normalizeCategory(post.data.category);
                 els.tags.value = (post.data.tags ?? []).join(", ");
+                els.featured.checked = Boolean(post.data.featured);
                 els.imageUrl.value = post.data.image?.url ?? "";
                 els.imageFile.value = "";
                 els.imageAlt.value = post.data.image?.alt ?? "";
@@ -656,6 +673,7 @@ ${adminMarkdownToolbar}
                 els.pubDate.value = today();
                 els.author.value = "catkin";
                 els.category.value = "未分类";
+                els.featured.checked = false;
                 els.body.value = "";
                 refreshPreview();
                 setStatus("正在新建文章。");
@@ -692,6 +710,7 @@ ${adminMarkdownToolbar}
                 author: els.author.value.trim(),
                 category: normalizeCategory(els.category.value),
                 tags: els.tags.value.split(",").map((tag) => tag.trim()).filter(Boolean),
+                featured: els.featured.checked,
                 draft,
                 imageUrl: els.imageUrl.value.trim(),
                 imageUpload: await readImageFile(els.imageFile.files?.[0]),
@@ -763,6 +782,7 @@ ${adminMarkdownToolbar}
                         '</span><span class="post-meta">' +
                         escapeHtml(post.pubDate) +
                         " · " +
+                        (post.featured ? "精选 · " : "") +
                         (post.draft ? "草稿" : "已发布") +
                         "</span>";
                     button.addEventListener("click", () => loadPost(post.slug));
@@ -1111,6 +1131,7 @@ async function listPosts() {
                 author: post.data.author,
                 category: post.data.category,
                 tags: post.data.tags,
+                featured: post.data.featured,
                 draft: post.data.draft,
             };
         }),
@@ -1166,6 +1187,7 @@ function normalizePost(payload) {
         tags: Array.isArray(payload.tags)
             ? payload.tags.map((tag) => String(tag).trim()).filter(Boolean)
             : [],
+        featured: Boolean(payload.featured),
         draft: Boolean(payload.draft),
         body: String(payload.body).replace(/\s+$/, ""),
     };
@@ -1226,7 +1248,7 @@ function parseMarkdown(markdown) {
 }
 
 function parseFrontmatter(frontmatter) {
-    const data = { tags: [], draft: false, category: "未分类" };
+    const data = { tags: [], featured: false, draft: false, category: "未分类" };
     const lines = frontmatter.split(/\r?\n/);
 
     for (let i = 0; i < lines.length; i += 1) {
@@ -1261,6 +1283,7 @@ function parseFrontmatter(frontmatter) {
         category: String(data.category ?? "").trim() || "未分类",
         image: data.image,
         tags: Array.isArray(data.tags) ? data.tags : [],
+        featured: Boolean(data.featured),
         draft: Boolean(data.draft),
     };
 }
@@ -1302,6 +1325,7 @@ function serializeMarkdown(post) {
     }
 
     lines.push(`tags: ${JSON.stringify(post.tags)}`);
+    lines.push(`featured: ${post.featured}`);
     lines.push(`draft: ${post.draft}`);
     lines.push("---", "", post.body, "");
     return lines.join("\n");

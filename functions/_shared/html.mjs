@@ -48,14 +48,30 @@ export function xmlResponse(body, status = 200) {
     });
 }
 
-export function renderHome(posts) {
+export function renderHome(posts, analytics = null) {
+    const featuredPosts = posts.filter((post) => post.data.featured);
+    const latestPosts = posts.filter((post) => !post.data.featured);
     const body = `
         <h1>${escapeHtml(siteName)}</h1>
         <section class="home-hero">
             <p>以渺小启程</p>
         </section>
-        <section class="post-feed" aria-label="文章列表">
-            ${posts.map(renderPostCard).join("")}
+        ${renderAnalyticsSummary(analytics)}
+        <section class="home-section" aria-labelledby="featured-posts-title">
+            <div class="section-heading">
+                <h2 id="featured-posts-title">精选文章</h2>
+            </div>
+            <div class="post-feed">
+                ${featuredPosts.map((post) => renderPostCard(post, { featured: true })).join("") || '<p class="article-description">暂无精选文章。</p>'}
+            </div>
+        </section>
+        <section class="home-section" aria-labelledby="latest-posts-title">
+            <div class="section-heading">
+                <h2 id="latest-posts-title">最新文章</h2>
+            </div>
+            <div class="post-feed" aria-label="文章列表">
+                ${(latestPosts.length > 0 ? latestPosts : posts).map(renderPostCard).join("")}
+            </div>
         </section>
     `;
     return renderLayout({ title: siteName, active: "/", body, showTitle: false });
@@ -313,6 +329,8 @@ export function renderAdminPage() {
             .post-meta { color: #687386; font-size: 0.82rem; }
             form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.85rem; }
             label { display: grid; gap: 0.3rem; font-weight: 700; }
+            label.checkbox-label { display: inline-flex; gap: 0.45rem; align-items: center; justify-self: start; }
+            label.checkbox-label input { width: auto; }
             input, textarea { width: 100%; border: 1px solid #d9dee7; border-radius: 6px; padding: 0.6rem; }
             textarea { min-height: 360px; resize: vertical; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
 ${adminEditorStyles}
@@ -345,6 +363,7 @@ ${adminEditorStyles}
                     <label>分类<input id="category" list="categoryOptions" placeholder="未分类" /></label>
                     <datalist id="categoryOptions"></datalist>
                     <label>标签<input id="tags" placeholder="逗号分隔" /></label>
+                    <label class="checkbox-label">精选文章<input id="featured" type="checkbox" /></label>
                     <label class="span-2">封面 URL<input id="imageUrl" /></label>
                     <label>上传封面<input id="imageFile" type="file" accept="image/png,image/jpeg,image/webp,image/gif" /></label>
                     <label>封面描述<input id="imageAlt" /></label>
@@ -379,6 +398,7 @@ ${adminMarkdownToolbar}
                 category: document.querySelector("#category"),
                 categoryOptions: document.querySelector("#categoryOptions"),
                 tags: document.querySelector("#tags"),
+                featured: document.querySelector("#featured"),
                 imageUrl: document.querySelector("#imageUrl"),
                 imageFile: document.querySelector("#imageFile"),
                 imageAlt: document.querySelector("#imageAlt"),
@@ -420,6 +440,7 @@ ${adminMarkdownToolbar}
                 author: els.author.value.trim(),
                 category: normalizeCategory(els.category.value),
                 tags: els.tags.value.split(",").map((tag) => tag.trim()).filter(Boolean),
+                featured: els.featured.checked,
                 draft,
                 imageUrl: els.imageUrl.value.trim(),
                 imageUpload: await readImageFile(els.imageFile.files?.[0]),
@@ -427,7 +448,7 @@ ${adminMarkdownToolbar}
                 body: els.body.value,
             });
             const renderPostList = () => {
-                els.postList.innerHTML = posts.map((post) => '<button class="post-item' + (post.slug === currentSlug ? ' active' : '') + '" type="button" data-slug="' + escapeHtml(post.slug) + '"><span class="post-title">' + escapeHtml(post.title) + '</span><span class="post-meta">' + escapeHtml(post.pubDate) + ' · ' + (post.draft ? '草稿' : '已发布') + '</span></button>').join("");
+                els.postList.innerHTML = posts.map((post) => '<button class="post-item' + (post.slug === currentSlug ? ' active' : '') + '" type="button" data-slug="' + escapeHtml(post.slug) + '"><span class="post-title">' + escapeHtml(post.title) + '</span><span class="post-meta">' + escapeHtml(post.pubDate) + ' · ' + (post.featured ? '精选 · ' : '') + (post.draft ? '草稿' : '已发布') + '</span></button>').join("");
                 els.postList.querySelectorAll("button").forEach((button) => button.addEventListener("click", () => loadPost(button.dataset.slug)));
             };
             const loadPosts = async () => {
@@ -445,6 +466,7 @@ ${adminMarkdownToolbar}
                 els.author.value = post.data.author || "";
                 els.category.value = normalizeCategory(post.data.category);
                 els.tags.value = (post.data.tags || []).join(", ");
+                els.featured.checked = Boolean(post.data.featured);
                 els.imageUrl.value = post.data.image?.url || "";
                 els.imageAlt.value = post.data.image?.alt || "";
                 els.imageFile.value = "";
@@ -463,6 +485,7 @@ ${adminMarkdownToolbar}
                 els.pubDate.value = new Date().toISOString().slice(0, 10);
                 els.author.value = "catkin";
                 els.category.value = "未分类";
+                els.featured.checked = false;
                 els.body.value = "";
                 if (typeof window.refreshMarkdownPreview === "function") {
                     window.refreshMarkdownPreview();
@@ -496,7 +519,41 @@ ${adminEditorScript}
 </html>`;
 }
 
-function renderPostCard(post) {
+function renderAnalyticsSummary(analytics) {
+    if (!analytics) {
+        return "";
+    }
+
+    if (!analytics.configured) {
+        return `
+            <section class="analytics-panel" aria-label="站点访问统计">
+                <div>
+                    <p class="panel-label">Umami Analytics</p>
+                    <h2>访问统计</h2>
+                </div>
+                <p class="analytics-message">${escapeHtml(analytics.message ?? "统计暂不可用")}</p>
+            </section>
+        `;
+    }
+
+    return `
+        <section class="analytics-panel" aria-label="站点访问统计">
+            <div>
+                <p class="panel-label">Umami Analytics</p>
+                <h2>访问统计</h2>
+                <p>${escapeHtml(analytics.periodLabel ?? "近 30 天")}</p>
+            </div>
+            <dl class="analytics-grid">
+                <div><dt>浏览量</dt><dd>${formatNumber(analytics.pageviews)}</dd></div>
+                <div><dt>访客</dt><dd>${formatNumber(analytics.visitors)}</dd></div>
+                <div><dt>访问</dt><dd>${formatNumber(analytics.visits)}</dd></div>
+                <div><dt>跳出</dt><dd>${formatNumber(analytics.bounces)}</dd></div>
+            </dl>
+        </section>
+    `;
+}
+
+function renderPostCard(post, options = {}) {
     const coverUrl = post.data.image?.url || "/defaultCover.png";
     const coverAlt = post.data.image?.alt || `${post.data.title} 的文章封面`;
     return `
@@ -508,6 +565,7 @@ function renderPostCard(post) {
                         <span>${escapeHtml(formatPostDate(post))}</span>
                         <span>${escapeHtml(post.data.author)}</span>
                         <span>${escapeHtml(normalizeCategory(post.data.category))}</span>
+                        ${options.featured || post.data.featured ? '<span class="post-card-badge">精选</span>' : ""}
                     </div>
                     <h2>${escapeHtml(post.data.title)}</h2>
                     <p>${escapeHtml(post.data.description)}</p>
@@ -523,6 +581,10 @@ function renderPostCard(post) {
 function renderTagLink(tag, count = null) {
     const label = count === null ? tag : `${tag} (${count})`;
     return `<a href="/tags/${encodeURIComponent(tag)}/">${escapeHtml(label)}</a>`;
+}
+
+function formatNumber(value) {
+    return new Intl.NumberFormat("zh-CN").format(Number(value) || 0);
 }
 
 function renderLayout({
@@ -558,6 +620,7 @@ function renderLayout({
                 </footer>
             </main>
         </div>
+        <script src="/analytics.js" defer></script>
         <script src="/site.js" defer></script>
     </body>
 </html>`;

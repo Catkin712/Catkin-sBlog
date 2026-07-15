@@ -251,6 +251,80 @@ h1 {
     font-size: 1.05rem;
 }
 
+.home-section {
+    display: grid;
+    gap: 0.8rem;
+    margin-top: 1.4rem;
+}
+
+.section-heading h2 {
+    margin: 0;
+    font-size: 1.35rem;
+    line-height: 1.3;
+}
+
+.analytics-panel {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 1.4fr);
+    gap: 1rem;
+    align-items: center;
+    border: 1px solid var(--line-color);
+    border-radius: 8px;
+    background: var(--panel-bg);
+    padding: 1rem;
+}
+
+.analytics-panel h2,
+.analytics-panel p,
+.analytics-grid {
+    margin: 0;
+}
+
+.panel-label {
+    color: var(--accent-color);
+    font-size: 0.78rem;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+
+.analytics-panel h2 {
+    margin-top: 0.2rem;
+    font-size: 1.25rem;
+}
+
+.analytics-panel p:not(.panel-label) {
+    margin-top: 0.35rem;
+    color: var(--muted-color);
+}
+
+.analytics-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.55rem;
+}
+
+.analytics-grid div {
+    border: 1px solid var(--line-color);
+    border-radius: 6px;
+    background: var(--page-bg);
+    padding: 0.7rem;
+}
+
+.analytics-grid dt {
+    color: var(--muted-color);
+    font-size: 0.8rem;
+}
+
+.analytics-grid dd {
+    margin: 0.2rem 0 0;
+    font-size: 1.35rem;
+    font-weight: 800;
+}
+
+.analytics-message {
+    justify-self: end;
+}
+
 .post-feed,
 .archive-list,
 .category-list {
@@ -299,6 +373,14 @@ h1 {
     gap: 0.5rem 0.75rem;
     color: var(--muted-color);
     font-size: 0.85rem;
+}
+
+.post-card-badge {
+    border: 1px solid var(--accent-color);
+    border-radius: 999px;
+    padding: 0 0.45rem;
+    color: var(--accent-color);
+    font-weight: 700;
 }
 
 .article-meta a {
@@ -602,8 +684,17 @@ h1 {
 
     .archive-item,
     .category-group li,
-    .article-header {
+    .article-header,
+    .analytics-panel {
         grid-template-columns: 1fr;
+    }
+
+    .analytics-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .analytics-message {
+        justify-self: start;
     }
 
     .article-cover {
