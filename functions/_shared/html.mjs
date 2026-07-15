@@ -48,7 +48,7 @@ export function xmlResponse(body, status = 200) {
     });
 }
 
-export function renderHome(posts, analytics = null) {
+export function renderHome(posts) {
     const featuredPosts = posts.filter((post) => post.data.featured);
     const latestPosts = posts.filter((post) => !post.data.featured);
     const body = `
@@ -56,7 +56,6 @@ export function renderHome(posts, analytics = null) {
         <section class="home-hero">
             <p>以渺小启程</p>
         </section>
-        ${renderAnalyticsSummary(analytics)}
         <section class="home-section" aria-labelledby="featured-posts-title">
             <div class="section-heading">
                 <h2 id="featured-posts-title">精选文章</h2>
@@ -519,40 +518,6 @@ ${adminEditorScript}
 </html>`;
 }
 
-function renderAnalyticsSummary(analytics) {
-    if (!analytics) {
-        return "";
-    }
-
-    if (!analytics.configured) {
-        return `
-            <section class="analytics-panel" aria-label="站点访问统计">
-                <div>
-                    <p class="panel-label">Umami Analytics</p>
-                    <h2>访问统计</h2>
-                </div>
-                <p class="analytics-message">${escapeHtml(analytics.message ?? "统计暂不可用")}</p>
-            </section>
-        `;
-    }
-
-    return `
-        <section class="analytics-panel" aria-label="站点访问统计">
-            <div>
-                <p class="panel-label">Umami Analytics</p>
-                <h2>访问统计</h2>
-                <p>${escapeHtml(analytics.periodLabel ?? "近 30 天")}</p>
-            </div>
-            <dl class="analytics-grid">
-                <div><dt>浏览量</dt><dd>${formatNumber(analytics.pageviews)}</dd></div>
-                <div><dt>访客</dt><dd>${formatNumber(analytics.visitors)}</dd></div>
-                <div><dt>访问</dt><dd>${formatNumber(analytics.visits)}</dd></div>
-                <div><dt>跳出</dt><dd>${formatNumber(analytics.bounces)}</dd></div>
-            </dl>
-        </section>
-    `;
-}
-
 function renderPostCard(post, options = {}) {
     const coverUrl = post.data.image?.url || "/defaultCover.png";
     const coverAlt = post.data.image?.alt || `${post.data.title} 的文章封面`;
@@ -581,10 +546,6 @@ function renderPostCard(post, options = {}) {
 function renderTagLink(tag, count = null) {
     const label = count === null ? tag : `${tag} (${count})`;
     return `<a href="/tags/${encodeURIComponent(tag)}/">${escapeHtml(label)}</a>`;
-}
-
-function formatNumber(value) {
-    return new Intl.NumberFormat("zh-CN").format(Number(value) || 0);
 }
 
 function renderLayout({
@@ -620,7 +581,6 @@ function renderLayout({
                 </footer>
             </main>
         </div>
-        <script src="/analytics.js" defer></script>
         <script src="/site.js" defer></script>
     </body>
 </html>`;
