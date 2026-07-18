@@ -1,6 +1,7 @@
 ---
 import Header from "../components/Header.astro";
 import Footer from "../components/Footer.astro";
+import RightSidebar from "../components/RightSidebar.astro";
 import "../style/global.css";
 const {
     pageTitle,
@@ -32,6 +33,7 @@ const {
                 <slot />
                 <Footer />
             </main>
+            <RightSidebar />
         </div>
         <script>
             import "../script/menu.js";

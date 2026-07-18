@@ -1,0 +1,86 @@
+---
+const sections = [
+    {
+        title: "Catkin 的账号",
+        links: [
+            {
+                name: "GitHub",
+                url: "https://github.com/Catkin712",
+                description: "项目源码与代码记录",
+            },
+            {
+                name: "洛谷",
+                url: "https://www.luogu.com.cn/user/457623",
+                description: "算法练习与竞赛记录",
+            },
+        ],
+    },
+    {
+        title: "常用网站",
+        links: [
+            {
+                name: "Astro 文档",
+                url: "https://docs.astro.build/",
+                description: "博客框架文档",
+            },
+            {
+                name: "MDN Web Docs",
+                url: "https://developer.mozilla.org/",
+                description: "前端开发参考",
+            },
+            {
+                name: "GitHub",
+                url: "https://github.com/",
+                description: "代码托管与开源项目",
+            },
+        ],
+    },
+    {
+        title: "友链",
+        links: [
+            {
+                name: "Funsh",
+                url: "https://funsh.icu/",
+                description: "迷你世界の神",
+            },
+            {
+                name: "期待交换友链",
+                url: "/about/",
+                description: "可以在关于页联系 Catkin",
+            },
+        ],
+    },
+];
+---
+
+<aside class="right-sidebar" aria-label="站点链接">
+    <div class="right-sidebar-inner">
+        {
+            sections.map((section) => (
+                <section class="link-panel">
+                    <h2>{section.title}</h2>
+                    <div class="link-list">
+                        {section.links.map((link) => (
+                            <a
+                                href={link.url}
+                                target={
+                                    link.url.startsWith("http")
+                                        ? "_blank"
+                                        : undefined
+                                }
+                                rel={
+                                    link.url.startsWith("http")
+                                        ? "noreferrer"
+                                        : undefined
+                                }
+                            >
+                                <span>{link.name}</span>
+                                <small>{link.description}</small>
+                            </a>
+                        ))}
+                    </div>
+                </section>
+            ))
+        }
+    </div>
+</aside>

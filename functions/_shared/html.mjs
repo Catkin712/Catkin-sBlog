@@ -81,8 +81,8 @@ export function renderArchive(posts) {
         <h1>归档</h1>
         <section class="archive-list" aria-label="文章归档">
             ${posts
-                .map(
-                    (post) => `
+            .map(
+                (post) => `
                         <article class="archive-item">
                             <time datetime="${escapeAttr(post.data.pubDate)}">${escapeHtml(formatPostDate(post))}</time>
                             <div>
@@ -91,8 +91,8 @@ export function renderArchive(posts) {
                             </div>
                         </article>
                     `,
-                )
-                .join("")}
+            )
+            .join("")}
         </section>
     `;
     return renderLayout({ title: "归档", active: "/archive/", body, showTitle: false });
@@ -131,14 +131,13 @@ export function renderArticle(post) {
 
             <div class="article-content">${post.html}</div>
 
-            ${
-                post.data.tags.length > 0
-                    ? `<footer class="article-tags" aria-label="文章标签">
+            ${post.data.tags.length > 0
+            ? `<footer class="article-tags" aria-label="文章标签">
                         <p>标签</p>
                         <div>${post.data.tags.map(renderTagLink).join("")}</div>
                     </footer>`
-                    : ""
-            }
+            : ""
+        }
         </article>
     `;
     return renderLayout({
@@ -177,30 +176,30 @@ export function renderCategoriesIndex(posts) {
         <h1>分类</h1>
         <section class="category-list" aria-label="文章分类">
             ${categories
-                .map((category) => {
-                    const categoryPosts = posts.filter(
-                        (post) => normalizeCategory(post.data.category) === category,
-                    );
-                    return `
+            .map((category) => {
+                const categoryPosts = posts.filter(
+                    (post) => normalizeCategory(post.data.category) === category,
+                );
+                return `
                         <section class="category-group">
                             <h2><a href="/categories/${encodeURIComponent(category)}/">${escapeHtml(category)}</a></h2>
                             <p>${categoryPosts.length} 篇文章</p>
                             <ol>
                                 ${categoryPosts
-                                    .map(
-                                        (post) => `
+                        .map(
+                            (post) => `
                                             <li>
                                                 <time datetime="${escapeAttr(post.data.pubDate)}">${escapeHtml(formatPostDate(post))}</time>
                                                 <a href="/posts/${encodeURIComponent(post.id)}/">${escapeHtml(post.data.title)}</a>
                                             </li>
                                         `,
-                                    )
-                                    .join("")}
+                        )
+                        .join("")}
                             </ol>
                         </section>
                     `;
-                })
-                .join("")}
+            })
+            .join("")}
         </section>
     `;
     return renderLayout({ title: "分类", active: "/categories/", body, showTitle: false });
@@ -232,16 +231,16 @@ export function renderRssXml(posts, siteUrl) {
 <link>${escapeXml(normalizedSite)}</link>
 <language>zh-CN</language>
 ${posts
-    .map(
-        (post) => `<item>
+            .map(
+                (post) => `<item>
 <title>${escapeXml(post.data.title)}</title>
 <description>${escapeXml(post.data.description)}</description>
 <pubDate>${escapeXml(new Date(post.data.pubDate).toUTCString())}</pubDate>
 <link>${escapeXml(`${normalizedSite}/posts/${post.id}/`)}</link>
 <guid>${escapeXml(`${normalizedSite}/posts/${post.id}/`)}</guid>
 </item>`,
-    )
-    .join("\n")}
+            )
+            .join("\n")}
 </channel>
 </rss>`;
 }
@@ -664,10 +663,95 @@ function renderLayout({
                     <p>Powered by Astro</p>
                 </footer>
             </main>
+            ${renderRightSidebar()}
         </div>
         <script src="/site.js" defer></script>
     </body>
 </html>`;
+}
+
+function renderRightSidebar() {
+    const sections = [
+        {
+            title: "Catkin 的账号",
+            links: [
+                {
+                    name: "GitHub",
+                    url: "https://github.com/Catkin712",
+                    description: "项目源码与代码记录",
+                },
+                {
+                    name: "洛谷",
+                    url: "https://www.luogu.com.cn/user/457623",
+                    description: "算法练习与竞赛记录",
+                },
+            ],
+        },
+        {
+            title: "常用网站",
+            links: [
+                {
+                    name: "Astro 文档",
+                    url: "https://docs.astro.build/",
+                    description: "博客框架文档",
+                },
+                {
+                    name: "MDN Web Docs",
+                    url: "https://developer.mozilla.org/",
+                    description: "前端开发参考",
+                },
+                {
+                    name: "GitHub",
+                    url: "https://github.com/",
+                    description: "代码托管与开源项目",
+                },
+            ],
+        },
+        {
+            title: "友链",
+            links: [
+                {
+                    name: "Funsh",
+                    url: "https://funsh.icu/",
+                    description: "迷你世界の神",
+                },
+                {
+                    name: "期待交换友链",
+                    url: "/about/",
+                    description: "可以在关于页联系 Catkin",
+                },
+            ],
+        },
+    ];
+
+    return `
+        <aside class="right-sidebar" aria-label="站点链接">
+            <div class="right-sidebar-inner">
+                ${sections
+            .map(
+                (section) => `
+                            <section class="link-panel">
+                                <h2>${escapeHtml(section.title)}</h2>
+                                <div class="link-list">
+                                    ${section.links
+                        .map((link) => {
+                            const externalAttrs = link.url.startsWith("http")
+                                ? ' target="_blank" rel="noreferrer"'
+                                : "";
+                            return `<a href="${escapeAttr(link.url)}"${externalAttrs}>
+                                                <span>${escapeHtml(link.name)}</span>
+                                                <small>${escapeHtml(link.description)}</small>
+                                            </a>`;
+                        })
+                        .join("")}
+                                </div>
+                            </section>
+                        `,
+            )
+            .join("")}
+            </div>
+        </aside>
+    `;
 }
 
 function renderSidebar(active) {
@@ -703,11 +787,11 @@ function renderSidebar(active) {
                 <nav aria-label="主导航">
                     <div id="main-menu" class="nav-links">
                         ${navItems
-                            .map(
-                                ([href, label]) =>
-                                    `<a class="${active === href ? "active" : ""}" href="${href}">${label}</a>`,
-                            )
-                            .join("")}
+            .map(
+                ([href, label]) =>
+                    `<a class="${active === href ? "active" : ""}" href="${href}">${label}</a>`,
+            )
+            .join("")}
                     </div>
                 </nav>
             </div>
