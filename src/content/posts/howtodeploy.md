@@ -8,7 +8,7 @@ image:
     url: "/covers/howtodeploy.png"
     alt: "【自用】如何将本地代码部署至服务器"
 tags: ["web","服务器"]
-featured: false
+featured: true
 draft: false
 ---
 
