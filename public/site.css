@@ -502,6 +502,8 @@ h1 {
     margin-top: 1.5rem;
     font-size: 1.03rem;
     line-height: 1.85;
+    min-width: 0;
+    overflow-wrap: break-word;
 }
 
 .article-content h2,
@@ -516,6 +518,33 @@ h1 {
 
 .article-content a {
     color: var(--accent-color);
+}
+
+.article-content code {
+    border-radius: 6px;
+    background: color-mix(in srgb, var(--accent-color) 10%, transparent);
+    padding: 0.12rem 0.35rem;
+    font-size: 0.92em;
+}
+
+.article-content pre {
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    border: 1px solid var(--line-color);
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--page-bg) 75%, var(--text-color) 8%);
+    padding: 1rem;
+    line-height: 1.65;
+}
+
+.article-content pre code {
+    display: block;
+    min-width: max-content;
+    border-radius: 0;
+    background: transparent;
+    padding: 0;
+    white-space: pre;
 }
 
 .article-content img {
