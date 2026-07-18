@@ -335,7 +335,41 @@ export function renderAdminPage() {
 ${adminEditorStyles}
             .span-2 { grid-column: 1 / -1; }
             .actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
-            #status { color: #687386; }
+            #status { color: #687386; min-height: 1.2rem; }
+            .loading-overlay {
+                position: fixed;
+                inset: 0;
+                display: grid;
+                place-items: center;
+                background: rgba(246, 247, 249, 0.55);
+                backdrop-filter: blur(2px);
+                z-index: 50;
+            }
+            .loading-overlay[hidden] {
+                display: none !important;
+            }
+            .loading-panel {
+                display: inline-flex;
+                gap: 0.75rem;
+                align-items: center;
+                border: 1px solid #d9dee7;
+                border-radius: 8px;
+                background: #fff;
+                color: #20242c;
+                padding: 0.85rem 1rem;
+                box-shadow: 0 12px 30px rgba(16, 24, 40, 0.08);
+            }
+            .loading-spinner {
+                width: 1rem;
+                height: 1rem;
+                border: 2px solid #d9dee7;
+                border-top-color: #216869;
+                border-radius: 999px;
+                animation: admin-spin 0.8s linear infinite;
+            }
+            @keyframes admin-spin {
+                to { transform: rotate(360deg); }
+            }
             @media (max-width: 820px) { .layout { grid-template-columns: 1fr; } aside { border-right: 0; border-bottom: 1px solid #d9dee7; } form { grid-template-columns: 1fr; } }
         </style>
     </head>
@@ -348,6 +382,12 @@ ${adminEditorStyles}
                 <button id="logout" type="button">退出</button>
             </div>
         </header>
+        <div id="adminLoading" class="loading-overlay" hidden>
+            <div class="loading-panel" role="status" aria-live="polite">
+                <span class="loading-spinner" aria-hidden="true"></span>
+                <span id="loadingText">加载中...</span>
+            </div>
+        </div>
         <div class="layout">
             <aside>
                 <div id="postList" class="post-list"></div>
@@ -403,10 +443,36 @@ ${adminMarkdownToolbar}
                 imageAlt: document.querySelector("#imageAlt"),
                 body: document.querySelector("#body"),
                 status: document.querySelector("#status"),
+                loading: document.querySelector("#adminLoading"),
+                loadingText: document.querySelector("#loadingText"),
             };
             let posts = [];
             let currentSlug = "";
+            let loadingDepth = 0;
             const setStatus = (value) => { els.status.textContent = value; };
+            const beginLoading = (message) => {
+                loadingDepth += 1;
+                if (els.loadingText) {
+                    els.loadingText.textContent = message;
+                }
+                if (els.loading) {
+                    els.loading.hidden = false;
+                }
+            };
+            const endLoading = () => {
+                loadingDepth = Math.max(0, loadingDepth - 1);
+                if (loadingDepth === 0 && els.loading) {
+                    els.loading.hidden = true;
+                }
+            };
+            const withLoading = async (message, task) => {
+                beginLoading(message);
+                try {
+                    return await task();
+                } finally {
+                    endLoading();
+                }
+            };
             const escapeHtml = (value) => String(value).replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]);
             const slugify = (value) => value.toLowerCase().trim().replace(/[^a-z0-9\\s_-]/g, "").replace(/[\\s_]+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
             const normalizeCategory = (value) => String(value || "").trim() || "未分类";
@@ -416,8 +482,19 @@ ${adminMarkdownToolbar}
             };
             const requestJson = async (url, options) => {
                 const response = await fetch(url, { headers: { "content-type": "application/json" }, ...options });
-                const payload = await response.json().catch(() => ({}));
-                if (!response.ok) throw new Error(payload.error || "请求失败");
+                const raw = await response.text();
+                let payload = {};
+                if (raw) {
+                    try {
+                        payload = JSON.parse(raw);
+                    } catch {
+                        payload = { raw };
+                    }
+                }
+                if (!response.ok) {
+                    const detail = payload.error || payload.message || payload.detail || payload.raw || response.statusText || "请求失败";
+                    throw new Error("HTTP " + response.status + ": " + detail);
+                }
                 return payload;
             };
             const readImageFile = (file) => new Promise((resolve, reject) => {
@@ -450,12 +527,12 @@ ${adminMarkdownToolbar}
                 els.postList.innerHTML = posts.map((post) => '<button class="post-item' + (post.slug === currentSlug ? ' active' : '') + '" type="button" data-slug="' + escapeHtml(post.slug) + '"><span class="post-title">' + escapeHtml(post.title) + '</span><span class="post-meta">' + escapeHtml(post.pubDate) + ' · ' + (post.featured ? '精选 · ' : '') + (post.draft ? '草稿' : '已发布') + '</span></button>').join("");
                 els.postList.querySelectorAll("button").forEach((button) => button.addEventListener("click", () => loadPost(button.dataset.slug)));
             };
-            const loadPosts = async () => {
+            const loadPosts = async () => withLoading("正在拉取文章列表...", async () => {
                 posts = await requestJson("/api/posts");
                 refreshCategoryOptions();
                 renderPostList();
-            };
-            const loadPost = async (slug) => {
+            });
+            const loadPost = async (slug) => withLoading("正在加载文章...", async () => {
                 const post = await requestJson("/api/posts/" + slug);
                 currentSlug = slug;
                 els.slug.value = post.slug;
@@ -477,7 +554,7 @@ ${adminMarkdownToolbar}
                 }
                 renderPostList();
                 setStatus("已加载 " + slug + ".md");
-            };
+            });
             const newPost = () => {
                 currentSlug = "";
                 els.form.reset();
@@ -494,7 +571,7 @@ ${adminMarkdownToolbar}
                 setStatus("正在新建文章。");
                 renderPostList();
             };
-            const save = async (draft) => {
+            const save = async (draft) => withLoading(draft ? "正在保存草稿..." : "正在发布文章...", async () => {
                 if (!els.form.reportValidity()) return;
                 const payload = await formData(draft);
                 await requestJson("/api/posts/" + payload.slug, { method: "PUT", body: JSON.stringify(payload) });
@@ -502,14 +579,21 @@ ${adminMarkdownToolbar}
                 await loadPosts();
                 await loadPost(payload.slug);
                 setStatus(draft ? "草稿已保存。" : "文章已发布。");
-            };
+            });
             els.title.addEventListener("input", () => { if (!currentSlug) els.slug.value = slugify(els.title.value); });
             document.querySelector("#newPost").addEventListener("click", newPost);
             document.querySelector("#refreshPosts").addEventListener("click", () => loadPosts().catch((error) => setStatus(error.message)));
             document.querySelector("#logout").addEventListener("click", async () => { await fetch("/api/logout", { method: "POST" }); location.reload(); });
             document.querySelector("#saveDraft").addEventListener("click", () => save(true).catch((error) => setStatus(error.message)));
             document.querySelector("#publishPost").addEventListener("click", () => save(false).catch((error) => setStatus(error.message)));
-            loadPosts().then(() => posts[0] ? loadPost(posts[0].slug) : newPost()).catch((error) => setStatus(error.message));
+            withLoading("正在初始化后台...", async () => {
+                await loadPosts();
+                if (posts[0]) {
+                    await loadPost(posts[0].slug);
+                } else {
+                    newPost();
+                }
+            }).catch((error) => setStatus(error.message));
         </script>
         <script>
 ${adminEditorScript}

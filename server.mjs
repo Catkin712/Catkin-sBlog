@@ -40,15 +40,18 @@ const routes = [
 ];
 
 const server = createServer(async (nodeRequest, nodeResponse) => {
+    let request;
     try {
-        const request = await toWebRequest(nodeRequest);
+        request = await toWebRequest(nodeRequest);
         const response = await handleRequest(request);
         await sendNodeResponse(nodeResponse, response, nodeRequest.method === "HEAD");
     } catch (error) {
-        const response = new Response(`Internal Server Error\n${error.stack || error.message}`, {
-            status: 500,
-            headers: { "content-type": "text/plain; charset=utf-8" },
-        });
+        const response = buildErrorResponse(
+            request ?? new Request(`http://${nodeRequest.headers.host ?? "127.0.0.1"}${nodeRequest.url ?? "/"}`, {
+                method: nodeRequest.method ?? "GET",
+            }),
+            error,
+        );
         await sendNodeResponse(nodeResponse, response);
     }
 });
@@ -241,4 +244,31 @@ function cacheControl(filePath) {
     return filePath.includes(`${path.sep}_astro${path.sep}`)
         ? "public, max-age=31536000, immutable"
         : "public, max-age=300";
+}
+
+function buildErrorResponse(request, error) {
+    const url = new URL(request.url);
+    const message = error?.message || String(error);
+
+    if (url.pathname.startsWith("/api/")) {
+        return new Response(
+            JSON.stringify({
+                error: message,
+                method: request.method,
+                path: url.pathname,
+            }),
+            {
+                status: 500,
+                headers: {
+                    "content-type": "application/json; charset=utf-8",
+                    "cache-control": "no-store",
+                },
+            },
+        );
+    }
+
+    return new Response(`Internal Server Error\n${error?.stack || message}`, {
+        status: 500,
+        headers: { "content-type": "text/plain; charset=utf-8" },
+    });
 }
