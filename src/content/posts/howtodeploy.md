@@ -9,7 +9,7 @@ image:
     alt: "【自用】如何将本地代码部署至服务器"
 tags: ["web","服务器"]
 featured: false
-draft: true
+draft: false
 ---
 
 ### 配置SSH免密登录
