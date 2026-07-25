@@ -1,0 +1,853 @@
+.albums-page,
+.album-detail {
+    display: grid;
+    gap: 1.25rem;
+    min-width: 0;
+}
+
+.albums-header,
+.album-detail-header {
+    display: flex;
+    align-items: end;
+    justify-content: space-between;
+    gap: 1.25rem;
+    padding-bottom: 1.25rem;
+    border-bottom: 1px solid var(--line-color);
+}
+
+.albums-header h1,
+.album-detail-header h1 {
+    margin: 0.15rem 0 0.45rem;
+    font-size: 2rem;
+}
+
+.albums-header p:last-child,
+.album-detail-header p:last-child {
+    margin: 0;
+    color: var(--muted-color);
+}
+
+.albums-page .eyebrow,
+.album-detail .eyebrow,
+.album-dialog .eyebrow {
+    letter-spacing: 0;
+}
+
+.album-header-actions,
+.dialog-footer,
+.moment-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.65rem;
+    align-items: center;
+}
+
+.album-mode-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    min-height: 2.4rem;
+}
+
+.album-mode-bar > span {
+    color: var(--muted-color);
+    font-size: 0.82rem;
+    font-weight: 700;
+}
+
+.album-mode-bar > small {
+    color: var(--muted-color);
+    font-size: 0.76rem;
+}
+
+.album-mode-switch {
+    display: inline-grid;
+    grid-template-columns: repeat(2, 1fr);
+    overflow: hidden;
+    border: 1px solid var(--line-color);
+    border-radius: 6px;
+}
+
+.album-mode-switch button {
+    min-width: 4.2rem;
+    border: 0;
+    border-right: 1px solid var(--line-color);
+    background: var(--panel-bg);
+    color: var(--muted-color);
+    cursor: pointer;
+    font: inherit;
+    font-size: 0.82rem;
+    font-weight: 700;
+    padding: 0.45rem 0.7rem;
+}
+
+.album-mode-switch button:last-child {
+    border-right: 0;
+}
+
+.album-mode-switch button.active {
+    background: var(--accent-color);
+    color: var(--panel-bg);
+}
+
+.album-notice {
+    margin: 0;
+    border-left: 3px solid var(--accent-color);
+    background: color-mix(in srgb, var(--accent-color) 8%, var(--panel-bg));
+    padding: 0.7rem 0.85rem;
+    color: var(--text-color);
+    font-size: 0.86rem;
+}
+
+.button,
+.moment-actions button,
+.reaction-form button {
+    border: 1px solid var(--line-color);
+    border-radius: 6px;
+    background: var(--panel-bg);
+    color: var(--text-color);
+    cursor: pointer;
+    font: inherit;
+    font-weight: 700;
+    padding: 0.62rem 0.9rem;
+    text-decoration: none;
+}
+
+.button.primary,
+.reaction-form button {
+    border-color: var(--accent-color);
+    background: var(--accent-color);
+    color: var(--panel-bg);
+}
+
+.button:hover,
+.button:focus,
+.moment-actions button:hover,
+.moment-actions button:focus {
+    border-color: var(--accent-color);
+    color: var(--accent-color);
+}
+
+.button.primary:hover,
+.button.primary:focus,
+.reaction-form button:hover,
+.reaction-form button:focus {
+    background: var(--accent-hover);
+    color: var(--panel-bg);
+}
+
+.button:disabled,
+.reaction-form button:disabled {
+    cursor: wait;
+    opacity: 0.58;
+}
+
+.album-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+}
+
+.album-card {
+    overflow: hidden;
+    border: 1px solid var(--line-color);
+    border-radius: 8px;
+    background: var(--panel-bg);
+}
+
+.album-card a {
+    display: block;
+    color: inherit;
+    text-decoration: none;
+}
+
+.album-card img {
+    display: block;
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    background: var(--page-bg);
+    object-fit: cover;
+    transition: transform 180ms ease;
+}
+
+.album-card a:hover img,
+.album-card a:focus img {
+    transform: scale(1.025);
+}
+
+.album-card-body {
+    padding: 0.85rem 0.95rem 1rem;
+}
+
+.album-card h2 {
+    margin: 0;
+    overflow-wrap: anywhere;
+    font-size: 1.1rem;
+}
+
+.album-card p {
+    margin: 0.25rem 0 0;
+    color: var(--muted-color);
+    font-size: 0.84rem;
+}
+
+.album-empty {
+    grid-column: 1 / -1;
+    padding: 3.5rem 1rem;
+    border-block: 1px solid var(--line-color);
+    text-align: center;
+}
+
+.album-empty h1,
+.album-empty h2 {
+    margin: 0 0 0.45rem;
+    font-size: 1.3rem;
+}
+
+.album-empty p {
+    margin: 0 0 1rem;
+    color: var(--muted-color);
+}
+
+.album-back {
+    justify-self: start;
+    color: var(--muted-color);
+    font-size: 0.9rem;
+    text-decoration: none;
+}
+
+.album-back:hover,
+.album-back:focus {
+    color: var(--accent-color);
+}
+
+.moment-feed {
+    display: grid;
+    gap: 1rem;
+}
+
+.moment {
+    display: grid;
+    grid-template-columns: 46px minmax(0, 1fr);
+    gap: 0.85rem;
+    border: 1px solid var(--line-color);
+    border-radius: 8px;
+    background: var(--panel-bg);
+    padding: 1rem;
+}
+
+.moment-avatar {
+    display: block;
+    width: 46px;
+    height: 46px;
+    border-radius: 6px;
+    background: var(--page-bg);
+    object-fit: cover;
+}
+
+.moment-content {
+    min-width: 0;
+}
+
+.moment-header {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.75rem;
+    align-items: baseline;
+}
+
+.moment-header strong {
+    color: var(--accent-color);
+    overflow-wrap: anywhere;
+}
+
+.moment-author {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.45rem;
+    min-width: 0;
+}
+
+.visibility-badge {
+    border: 1px solid #b55d72;
+    border-radius: 999px;
+    color: #a33f55;
+    font-size: 0.68rem;
+    font-weight: 700;
+    padding: 0.05rem 0.38rem;
+}
+
+.moment-header time {
+    flex: none;
+    color: var(--muted-color);
+    font-size: 0.75rem;
+}
+
+.moment-message {
+    margin: 0.65rem 0;
+    overflow-wrap: anywhere;
+    line-height: 1.65;
+}
+
+.moment-metadata {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem 1rem;
+    margin: 0.55rem 0;
+    color: var(--muted-color);
+    font-size: 0.82rem;
+}
+
+.moment-metadata span {
+    display: flex;
+    gap: 0.35rem;
+}
+
+.moment-metadata strong {
+    color: var(--text-color);
+}
+
+.moment-photos {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.28rem;
+    width: min(100%, 31rem);
+    margin-top: 0.75rem;
+}
+
+.moment-photos.count-1 {
+    grid-template-columns: minmax(0, 1fr);
+    width: min(100%, 22rem);
+}
+
+.moment-photos.count-2,
+.moment-photos.count-4 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: min(100%, 28rem);
+}
+
+.moment-photo {
+    min-width: 0;
+    overflow: hidden;
+    border: 0;
+    border-radius: 3px;
+    background: var(--page-bg);
+    cursor: zoom-in;
+    padding: 0;
+    aspect-ratio: 1;
+}
+
+.moment-photo img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.moment-albums {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    margin-top: 0.75rem;
+}
+
+.moment-albums a {
+    border: 1px solid var(--line-color);
+    border-radius: 999px;
+    color: var(--muted-color);
+    font-size: 0.76rem;
+    padding: 0.15rem 0.5rem;
+    text-decoration: none;
+}
+
+.moment-actions {
+    justify-content: end;
+    margin-top: 0.65rem;
+}
+
+.moment-actions button {
+    border: 0;
+    background: transparent;
+    color: var(--muted-color);
+    font-size: 0.82rem;
+    padding: 0.35rem 0.5rem;
+}
+
+.reaction-box {
+    display: none;
+    margin-top: 0.45rem;
+    background: color-mix(in srgb, var(--page-bg) 84%, var(--panel-bg));
+    padding: 0.55rem 0.7rem;
+    font-size: 0.85rem;
+}
+
+.reaction-box.has-content {
+    display: block;
+}
+
+.like-list {
+    margin: 0;
+    color: #a33f55;
+}
+
+.like-list span {
+    color: var(--text-color);
+}
+
+.comment-list:not(:empty) {
+    margin-top: 0.4rem;
+    padding-top: 0.4rem;
+    border-top: 1px solid var(--line-color);
+}
+
+.comment-list p {
+    margin: 0.25rem 0;
+    overflow-wrap: anywhere;
+}
+
+.comment-list strong {
+    color: var(--accent-color);
+}
+
+.reaction-form {
+    display: grid;
+    grid-template-columns: minmax(7rem, 0.7fr) minmax(10rem, 1.3fr) auto;
+    gap: 0.4rem;
+    margin-top: 0.5rem;
+}
+
+.reaction-form[hidden] {
+    display: none;
+}
+
+.reaction-form[data-reaction-form="like"] {
+    grid-template-columns: minmax(8rem, 1fr) auto;
+}
+
+.reaction-form input,
+.album-dialog input,
+.album-dialog textarea {
+    width: 100%;
+    border: 1px solid var(--line-color);
+    border-radius: 6px;
+    background: var(--page-bg);
+    color: var(--text-color);
+    font: inherit;
+    padding: 0.62rem 0.7rem;
+}
+
+.reaction-form input:focus,
+.album-dialog input:focus,
+.album-dialog textarea:focus {
+    border-color: var(--accent-color);
+    outline: 2px solid color-mix(in srgb, var(--accent-color) 18%, transparent);
+}
+
+.inline-status {
+    grid-column: 1 / -1;
+    min-height: 1em;
+    margin: 0;
+    color: #a33f55;
+    font-size: 0.78rem;
+}
+
+.album-dialog {
+    width: min(680px, calc(100vw - 2rem));
+    max-height: min(88vh, 820px);
+    overflow: hidden;
+    border: 1px solid var(--line-color);
+    border-radius: 8px;
+    background: var(--panel-bg);
+    color: var(--text-color);
+    padding: 0;
+    box-shadow: 0 24px 70px rgb(0 0 0 / 24%);
+}
+
+.album-dialog.compact-dialog {
+    width: min(440px, calc(100vw - 2rem));
+}
+
+.album-dialog::backdrop,
+.photo-lightbox::backdrop {
+    background: rgb(7 13 18 / 72%);
+}
+
+.dialog-panel {
+    display: grid;
+    gap: 1rem;
+    max-height: min(88vh, 820px);
+    overflow-y: auto;
+    padding: 1.1rem;
+}
+
+.dialog-header {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    align-items: start;
+}
+
+.dialog-header h2 {
+    margin: 0;
+    font-size: 1.2rem;
+}
+
+.dialog-close {
+    width: 2rem;
+    height: 2rem;
+    flex: none;
+    border: 0;
+    border-radius: 50%;
+    background: var(--page-bg);
+    color: var(--muted-color);
+    cursor: pointer;
+    font: 1.35rem/1 sans-serif;
+}
+
+.dialog-panel > label,
+.upload-section label {
+    display: grid;
+    gap: 0.35rem;
+    color: var(--muted-color);
+    font-size: 0.82rem;
+    font-weight: 700;
+}
+
+.upload-section {
+    display: grid;
+    gap: 0.65rem;
+    padding-top: 0.9rem;
+    border-top: 1px solid var(--line-color);
+}
+
+.upload-section h3 {
+    grid-column: 1 / -1;
+    margin: 0;
+    font-size: 0.95rem;
+}
+
+.visibility-options {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.5rem;
+}
+
+.visibility-options label {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    border: 1px solid var(--line-color);
+    border-radius: 6px;
+    cursor: pointer;
+    padding: 0.65rem 0.7rem;
+}
+
+.visibility-options label:has(input:checked) {
+    border-color: var(--accent-color);
+    background: color-mix(in srgb, var(--accent-color) 8%, var(--panel-bg));
+}
+
+.visibility-options input {
+    width: auto;
+    flex: none;
+}
+
+.visibility-options span {
+    display: grid;
+    gap: 0.08rem;
+}
+
+.visibility-options strong {
+    color: var(--text-color);
+    font-size: 0.86rem;
+}
+
+.visibility-options small {
+    color: var(--muted-color);
+    font-size: 0.72rem;
+    font-weight: 400;
+}
+
+.mode-password-hint {
+    margin: 0;
+    color: var(--muted-color);
+}
+
+.form-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.full-width,
+.avatar-hint {
+    grid-column: 1 / -1;
+}
+
+.album-dialog textarea {
+    min-height: 5rem;
+    resize: vertical;
+}
+
+.file-picker {
+    place-items: center;
+    border: 1px dashed var(--accent-color);
+    border-radius: 6px;
+    background: color-mix(in srgb, var(--accent-color) 6%, var(--panel-bg));
+    cursor: pointer;
+    padding: 1.1rem;
+    text-align: center;
+}
+
+.file-picker input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    opacity: 0;
+}
+
+.file-picker span {
+    color: var(--accent-color);
+    font-size: 0.95rem;
+}
+
+.file-picker small,
+.avatar-hint,
+.album-options p {
+    margin: 0;
+    color: var(--muted-color);
+    font-size: 0.78rem;
+    font-weight: 400;
+}
+
+.photo-preview {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 0.35rem;
+}
+
+.photo-preview:empty {
+    display: none;
+}
+
+.photo-selection-summary {
+    min-height: 1.2em;
+    margin: 0;
+    color: var(--muted-color);
+    font-size: 0.78rem;
+}
+
+.photo-selection-summary.error {
+    color: #b33a4b;
+    font-weight: 700;
+}
+
+.preview-item {
+    position: relative;
+    aspect-ratio: 1;
+    overflow: hidden;
+    border-radius: 4px;
+    background: var(--page-bg);
+}
+
+.preview-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.preview-item span {
+    position: absolute;
+    right: 0.2rem;
+    bottom: 0.15rem;
+    border-radius: 3px;
+    background: rgb(0 0 0 / 68%);
+    color: white;
+    font-size: 0.68rem;
+    padding: 0.05rem 0.25rem;
+}
+
+.album-options {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.4rem;
+    max-height: 9rem;
+    overflow-y: auto;
+}
+
+.album-options .check-option {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    min-width: 0;
+    border: 1px solid var(--line-color);
+    border-radius: 6px;
+    padding: 0.5rem 0.6rem;
+}
+
+.check-option input {
+    width: auto;
+    flex: none;
+}
+
+.check-option span {
+    overflow: hidden;
+    color: var(--text-color);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.avatar-hint.ready {
+    color: var(--accent-color);
+}
+
+.dialog-footer {
+    position: sticky;
+    bottom: -1.1rem;
+    justify-content: space-between;
+    border-top: 1px solid var(--line-color);
+    background: var(--panel-bg);
+    padding: 0.85rem 0 1.1rem;
+}
+
+.dialog-status {
+    flex: 1;
+    min-height: 1.25em;
+    margin: 0;
+    color: var(--muted-color);
+    font-size: 0.82rem;
+}
+
+.upload-status-wrap {
+    display: grid;
+    flex: 1;
+    gap: 0.35rem;
+    min-width: min(16rem, 100%);
+}
+
+.upload-progress {
+    width: 100%;
+    height: 0.45rem;
+    overflow: hidden;
+    border: 0;
+    border-radius: 999px;
+    background: var(--page-bg);
+}
+
+.upload-progress::-webkit-progress-bar {
+    border-radius: inherit;
+    background: var(--page-bg);
+}
+
+.upload-progress::-webkit-progress-value {
+    border-radius: inherit;
+    background: var(--accent-color);
+}
+
+.upload-progress::-moz-progress-bar {
+    border-radius: inherit;
+    background: var(--accent-color);
+}
+
+.dialog-status.error {
+    color: #b33a4b;
+}
+
+.photo-lightbox {
+    width: min(94vw, 1200px);
+    height: min(92vh, 900px);
+    overflow: hidden;
+    border: 0;
+    background: transparent;
+    padding: 0;
+}
+
+.photo-lightbox img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.photo-lightbox button {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    z-index: 1;
+    width: 2.4rem;
+    height: 2.4rem;
+    border: 0;
+    border-radius: 50%;
+    background: rgb(0 0 0 / 64%);
+    color: white;
+    cursor: pointer;
+    font: 1.5rem/1 sans-serif;
+}
+
+@media screen and (max-width: 600px) {
+    .albums-header,
+    .album-detail-header {
+        align-items: start;
+        flex-direction: column;
+    }
+
+    .album-header-actions,
+    .album-detail-header .button {
+        width: 100%;
+    }
+
+    .album-header-actions .button,
+    .album-detail-header .button {
+        flex: 1;
+        text-align: center;
+    }
+
+    .album-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .moment {
+        grid-template-columns: 38px minmax(0, 1fr);
+        gap: 0.65rem;
+        padding: 0.75rem;
+    }
+
+    .moment-avatar {
+        width: 38px;
+        height: 38px;
+    }
+
+    .moment-header {
+        align-items: start;
+        flex-direction: column;
+        gap: 0.1rem;
+    }
+
+    .reaction-form,
+    .reaction-form[data-reaction-form="like"] {
+        grid-template-columns: 1fr;
+    }
+
+    .form-grid,
+    .album-options,
+    .visibility-options {
+        grid-template-columns: 1fr;
+    }
+
+    .album-mode-bar {
+        align-items: start;
+        flex-wrap: wrap;
+    }
+
+    .album-mode-bar > small {
+        width: 100%;
+    }
+
+    .photo-preview {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .dialog-footer {
+        align-items: stretch;
+        flex-direction: column;
+    }
+}

@@ -444,6 +444,7 @@ ${adminEditorStyles}
                         <div class="markdown-editor">
                             <label for="body">正文</label>
 ${adminMarkdownToolbar}
+                            <input id="bodyImageFile" type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden />
                             <textarea id="body" required></textarea>
                         </div>
                         <section class="preview-panel" aria-label="Markdown 预览">
@@ -531,17 +532,32 @@ ${adminMarkdownToolbar}
                 }
                 return payload;
             };
-            const readImageFile = (file) => new Promise((resolve, reject) => {
-                if (!file) return resolve(null);
-                const reader = new FileReader();
-                reader.addEventListener("load", () => {
-                    const value = String(reader.result || "");
-                    const [, base64 = ""] = value.split(",");
-                    resolve({ name: file.name, type: file.type, base64 });
+            const uploadMedia = async (file, kind) => {
+                const upload = await requestJson("/api/post-media", {
+                    method: "POST",
+                    body: JSON.stringify({
+                        kind,
+                        name: file.name,
+                        size: file.size,
+                        mimeType: file.type,
+                    }),
                 });
-                reader.addEventListener("error", () => reject(new Error("封面读取失败")));
-                reader.readAsDataURL(file);
+                const response = await fetch(upload.uploadUrl, {
+                    method: "PUT",
+                    headers: { "content-type": file.type },
+                    body: file,
+                });
+                if (!response.ok) {
+                    throw new Error("COS 图片上传失败（HTTP " + response.status + "）");
+                }
+                return upload;
+            };
+            window.uploadPostBodyImage = async (file) => withLoading("正在上传正文图片...", async () => {
+                const upload = await uploadMedia(file, "body");
+                setStatus("正文图片已上传。");
+                return upload.value;
             });
+            window.reportPostMediaError = (error) => setStatus(error?.message || "图片上传失败");
             const formData = async (draft) => ({
                 slug: els.slug.value.trim(),
                 title: els.title.value.trim(),
@@ -553,7 +569,6 @@ ${adminMarkdownToolbar}
                 featured: els.featured.checked,
                 draft,
                 imageUrl: els.imageUrl.value.trim(),
-                imageUpload: await readImageFile(els.imageFile.files?.[0]),
                 imageAlt: els.imageAlt.value.trim(),
                 body: els.body.value,
             });
@@ -608,6 +623,11 @@ ${adminMarkdownToolbar}
             const save = async (draft) => withLoading(draft ? "正在保存草稿..." : "正在发布文章...", async () => {
                 if (!els.form.reportValidity()) return;
                 const payload = await formData(draft);
+                const coverFile = els.imageFile.files?.[0];
+                if (coverFile) {
+                    const upload = await uploadMedia(coverFile, "cover");
+                    payload.imageUrl = upload.value;
+                }
                 await requestJson("/api/posts/" + payload.slug, { method: "PUT", body: JSON.stringify(payload) });
                 currentSlug = payload.slug;
                 await loadPosts();
@@ -666,12 +686,14 @@ function renderTagLink(tag, count = null) {
     return `<a href="/tags/${encodeURIComponent(tag)}/">${escapeHtml(label)}</a>`;
 }
 
-function renderLayout({
+export function renderLayout({
     title,
     body,
     active = "",
     description = defaultDescription,
     showTitle = true,
+    styles = [],
+    scripts = [],
 }) {
     return `<!doctype html>
 <html lang="zh-CN">
@@ -685,6 +707,7 @@ function renderLayout({
         <script>try{const t=localStorage.getItem("theme");const d=t?t==="dark":matchMedia("(prefers-color-scheme: dark)").matches;document.documentElement.classList.toggle("dark",d)}catch{}</script>
         <link rel="stylesheet" href="${katexCssHref}" crossorigin="anonymous" />
         <link rel="stylesheet" href="/site.css" />
+        ${styles.map((href) => `<link rel="stylesheet" href="${escapeAttr(href)}" />`).join("\n")}
     </head>
     <body>
         <div class="site-shell">
@@ -701,6 +724,7 @@ function renderLayout({
             ${renderRightSidebar()}
         </div>
         <script src="/site.js" defer></script>
+        ${scripts.map((src) => `<script src="${escapeAttr(src)}" defer></script>`).join("\n")}
     </body>
 </html>`;
 }
@@ -847,6 +871,7 @@ function renderSidebar(active) {
                                 <a class="${active === "/tags/" ? "active" : ""}" href="/tags/">标签</a>
                             </div>
                         </div>
+                        <a class="${active === "/album/" ? "active" : ""}" href="/album/">相册</a>
                         <a class="${active === "/guestbook/" ? "active" : ""}" href="/guestbook/">留言板</a>
                         <a class="${active === "/about/" ? "active" : ""}" href="/about/">关于</a>
                     </div>
@@ -965,7 +990,7 @@ export function escapeHtml(value) {
     );
 }
 
-function escapeAttr(value) {
+export function escapeAttr(value) {
     return escapeHtml(value);
 }
 

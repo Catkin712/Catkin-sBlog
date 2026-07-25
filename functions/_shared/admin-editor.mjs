@@ -316,6 +316,7 @@ export const adminEditorScript = String.raw`
     const textarea = document.querySelector("#body");
     const preview = document.querySelector("#preview");
     const toolbar = document.querySelector(".markdown-toolbar");
+    const imageInput = document.querySelector("#bodyImageFile");
 
     if (!textarea || !preview || !toolbar) {
         return;
@@ -572,6 +573,27 @@ export const adminEditorScript = String.raw`
         replaceRange(start, end, text, offset, offset);
     };
 
+    const uploadImage = () => {
+        if (!imageInput || typeof window.uploadPostBodyImage !== "function") {
+            wrapSelection("![", "](https://example.com/image.png)", "alt text");
+            return;
+        }
+        imageInput.click();
+    };
+
+    imageInput?.addEventListener("change", async () => {
+        const file = imageInput.files?.[0];
+        imageInput.value = "";
+        if (!file) return;
+        try {
+            const url = await window.uploadPostBodyImage(file);
+            const alt = file.name.replace(/\.[^.]+$/, "").replace(/[\[\]]/g, "") || "图片";
+            insertAtCursor("![" + alt + "](" + url + ")");
+        } catch (error) {
+            window.reportPostMediaError?.(error);
+        }
+    });
+
     const isInsideMath = (value, position) => {
         const before = value.slice(0, position);
         let dollarCount = 0;
@@ -620,7 +642,7 @@ export const adminEditorScript = String.raw`
         italic: () => wrapSelection("*", "*", "italic text"),
         strike: () => wrapSelection("~~", "~~", "strikethrough"),
         link: () => wrapSelection("[", "](https://example.com)", "link text"),
-        image: () => wrapSelection("![", "](https://example.com/image.png)", "alt text"),
+        image: uploadImage,
         code: () => wrapSelection("\x60", "\x60", "code"),
         quote: () => prefixCurrentLines("> ", "> "),
         hr: () => insertAtCursor("\n\n---\n\n", 2),

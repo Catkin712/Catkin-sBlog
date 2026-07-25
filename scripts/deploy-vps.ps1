@@ -44,6 +44,13 @@ if (Test-Path $ArchivePath) {
 Run "tar" @(
     "--exclude=node_modules",
     "--exclude=.git",
+    "--exclude=.env",
+    "--exclude=.env.local",
+    "--exclude=.env.production",
+    "--exclude=data",
+    "--exclude=dist",
+    "--exclude=.astro",
+    "--exclude=.wrangler",
     "--exclude=$ArchiveName",
     "-czf",
     $ArchiveName,
@@ -62,11 +69,11 @@ $remoteScript = @(
     "tar -xzf $archiveNameArg",
     "npm install",
     "npm run build",
-    "(pm2 restart $pm2NameArg || pm2 start npm --name $pm2NameArg -- start)",
+    "(pm2 restart $pm2NameArg --update-env || pm2 start npm --name $pm2NameArg -- start)",
     "pm2 save"
 ) -join " && "
 
 Run "ssh" @($SshHost, $remoteScript)
 
 Step "Deployment finished"
-Write-Host "Open: http://123.99.201.167:8888/" -ForegroundColor Green
+Write-Host "Open: https://www.catkins.vip/" -ForegroundColor Green
