@@ -218,6 +218,7 @@ export function renderCategoryPage(category, posts) {
 }
 
 export function renderGuestbook(messages = []) {
+    const cloudLayouts = createGuestbookCloudLayouts(messages);
     const body = `
         <section class="guestbook-page" aria-labelledby="guestbook-title">
             <div class="guestbook-hero">
@@ -239,9 +240,9 @@ export function renderGuestbook(messages = []) {
                 <p class="guestbook-status" id="guestbook-status" role="status"></p>
             </form>
 
-            <div class="guestbook-sky" id="guestbook-sky" aria-live="polite">
+            <div class="guestbook-sky" id="guestbook-sky" aria-live="polite" style="--cloud-count:${messages.length};">
                 ${messages.length > 0
-            ? messages.map((message, index) => renderGuestbookCloud(message, index)).join("")
+            ? messages.map((message, index) => renderGuestbookCloud(message, index, cloudLayouts[index])).join("")
             : '<p class="guestbook-empty">还没有留言，第一朵云等你来放飞。</p>'
         }
             </div>
@@ -855,10 +856,8 @@ function renderSidebar(active) {
     `;
 }
 
-function renderGuestbookCloud(message, index) {
+function renderGuestbookCloud(message, index, layout) {
     const seed = hashText(message.id || `${message.createdAt}-${message.content}`);
-    const x = 4 + (seed % 72);
-    const y = 8 + ((seed >> 3) % 68);
     const tone = (seed % 5) + 1;
     const scale = 86 + (seed % 34);
     const drift = index % 2 === 0 ? "normal" : "reverse";
@@ -866,13 +865,82 @@ function renderGuestbookCloud(message, index) {
     return `
         <article
             class="guestbook-cloud tone-${tone}"
-            style="--x:${x}; --y:${y}; --scale:${scale}; --drift:${drift};"
+            style="--x:${layout.x}; --y:${layout.y}; --scale:${scale}; --drift:${drift};"
             title="${escapeAttr(message.nickname)}"
             data-author="${escapeAttr(message.nickname)}"
         >
             <p>${escapeHtml(message.content)}</p>
         </article>
     `;
+}
+
+function createGuestbookCloudLayouts(messages) {
+    const placed = [];
+    const skyHeight = Math.max(520, messages.length * 74);
+
+    return messages.map((message, index) => {
+        const seed = hashText(message.id || `${message.createdAt}-${message.content}`);
+        const scale = 86 + (seed % 34);
+        const box = estimateGuestbookCloudBox(message, scale, skyHeight);
+
+        for (let attempt = 0; attempt < 140; attempt += 1) {
+            const candidate = {
+                x: randomFloat(4 + box.width / 2, 96 - box.width / 2),
+                y: randomFloat(5 + box.height / 2, 95 - box.height / 2),
+                ...box,
+            };
+
+            if (!placed.some((item) => overlaps(candidate, item))) {
+                placed.push(candidate);
+                return candidate;
+            }
+        }
+
+        const fallback = createGuestbookGridPosition(index, messages.length, box);
+        placed.push(fallback);
+        return fallback;
+    });
+}
+
+function estimateGuestbookCloudBox(message, scale, skyHeight) {
+    const visualLength = [...String(message.content ?? "")].reduce(
+        (total, char) => total + (char.charCodeAt(0) > 255 ? 2 : 1),
+        0,
+    );
+    const widthPx = Math.min(300, Math.max(120, 72 + visualLength * 10)) * (scale / 100);
+    const heightPx = (visualLength > 34 ? 92 : visualLength > 18 ? 74 : 58) * (scale / 100);
+
+    return {
+        width: (widthPx / 650) * 100,
+        height: (heightPx / skyHeight) * 100,
+    };
+}
+
+function createGuestbookGridPosition(index, total, box) {
+    const columns = 3;
+    const rows = Math.max(1, Math.ceil(total / columns));
+    const column = index % columns;
+    const row = Math.floor(index / columns);
+
+    return {
+        x: clamp(((column + 0.5) / columns) * 88 + 6 + randomFloat(-3, 3), 4 + box.width / 2, 96 - box.width / 2),
+        y: clamp(((row + 0.5) / rows) * 90 + 5 + randomFloat(-2, 2), 5 + box.height / 2, 95 - box.height / 2),
+        ...box,
+    };
+}
+
+function overlaps(a, b) {
+    const gap = 1.5;
+    return Math.abs(a.x - b.x) < (a.width + b.width) / 2 + gap
+        && Math.abs(a.y - b.y) < (a.height + b.height) / 2 + gap;
+}
+
+function randomFloat(min, max) {
+    return Number((Math.random() * (max - min) + min).toFixed(2));
+}
+
+function clamp(value, min, max) {
+    return Math.min(max, Math.max(min, value));
 }
 
 function hashText(value) {

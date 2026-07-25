@@ -794,7 +794,7 @@ h1 {
 
 .guestbook-sky {
     position: relative;
-    min-height: 520px;
+    min-height: max(520px, calc(var(--cloud-count, 0) * 74px));
     overflow: hidden;
     border: 1px solid color-mix(in srgb, var(--accent-color) 28%, var(--line-color));
     border-radius: 22px;
@@ -828,7 +828,7 @@ h1 {
     z-index: 1;
     max-width: min(18rem, 70%);
     transform: translate(-50%, -50%) scale(calc(var(--scale) / 100));
-    animation: guestbook-drift 7s ease-in-out infinite alternate;
+    animation: guestbook-drift 18s ease-in-out infinite;
     animation-direction: var(--drift);
 }
 
@@ -920,11 +920,21 @@ h1 {
 }
 
 @keyframes guestbook-drift {
-    from {
-        translate: -0.35rem -0.45rem;
+    0%,
+    100% {
+        translate: -0.25rem -0.2rem;
     }
-    to {
-        translate: 0.45rem 0.35rem;
+
+    25% {
+        translate: 0.35rem -0.45rem;
+    }
+
+    50% {
+        translate: 0.5rem 0.25rem;
+    }
+
+    75% {
+        translate: -0.2rem 0.4rem;
     }
 }
 

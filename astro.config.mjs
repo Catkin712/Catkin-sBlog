@@ -8,7 +8,7 @@ import preact from "@astrojs/preact";
 
 // https://astro.build/config
 export default defineConfig({
-    site: "https://catkinsblog.pages.dev/",
+    site: "https://www.catkins.vip/",
     integrations: [preact()],
     markdown: {
         processor: unified({

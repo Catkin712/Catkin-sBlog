@@ -27,6 +27,10 @@ function Run($Command, $Arguments, $WorkingDirectory = $ProjectRoot) {
     }
 }
 
+function Quote-Sh($Value) {
+    return "'" + ($Value -replace "'", "'`"`"'`"`"'") + "'"
+}
+
 Step "Checking SSH connection"
 Run "ssh" @($SshHost, "echo connected")
 
@@ -50,15 +54,17 @@ Step "Uploading archive"
 Run "scp" @($ArchivePath, "${SshHost}:${RemoteDir}/")
 
 Step "Deploying on server"
-$remoteScript = @"
-set -e
-cd "$RemoteDir"
-tar -xzf "$ArchiveName"
-npm install
-npm run build
-pm2 restart "$Pm2Name" || pm2 start npm --name "$Pm2Name" -- start
-pm2 save
-"@
+$remoteDirArg = Quote-Sh $RemoteDir
+$archiveNameArg = Quote-Sh $ArchiveName
+$pm2NameArg = Quote-Sh $Pm2Name
+$remoteScript = @(
+    "cd $remoteDirArg",
+    "tar -xzf $archiveNameArg",
+    "npm install",
+    "npm run build",
+    "(pm2 restart $pm2NameArg || pm2 start npm --name $pm2NameArg -- start)",
+    "pm2 save"
+) -join " && "
 
 Run "ssh" @($SshHost, $remoteScript)
 
