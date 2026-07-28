@@ -56,6 +56,18 @@ export function listAlbums(env = {}, includeInner = false) {
     `).all().map((row) => normalizeAlbumRow(row, env));
 }
 
+export function countPhotos(env = {}, includeInner = false) {
+    const db = getDatabase(env);
+    const visibleUpload = includeInner ? "1 = 1" : "u.visibility = 'public'";
+    const row = db.prepare(`
+        SELECT COUNT(*) AS count
+        FROM photos p
+        JOIN uploads u ON u.id = p.upload_id
+        WHERE ${visibleUpload}
+    `).get();
+    return Number(row?.count || 0);
+}
+
 export function getAlbum(env = {}, albumId, includeInner = false) {
     const db = getDatabase(env);
     const id = positiveInteger(albumId, "相册不存在");

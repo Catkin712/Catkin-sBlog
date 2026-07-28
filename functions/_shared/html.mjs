@@ -48,32 +48,162 @@ export function xmlResponse(body, status = 200) {
     });
 }
 
-export function renderHome(posts) {
+export function renderHome(posts, stats = {}) {
     const featuredPosts = posts.filter((post) => post.data.featured);
-    const latestPosts = posts.filter((post) => !post.data.featured);
+    const featuredDisplayPosts = featuredPosts.length > 0 ? featuredPosts : posts.slice(0, 3);
+    const latestPosts = posts.slice(0, 5);
+    const dashboardStats = [
+        {
+            label: "访问人数",
+            value: formatCompactNumber(stats.visitorCount),
+            hint: "已记录的独立访客",
+            tone: "teal",
+        },
+        {
+            label: "收录文章",
+            value: formatCompactNumber(posts.length),
+            hint: "公开发布内容",
+            tone: "rose",
+        },
+        {
+            label: "收录图片",
+            value: formatCompactNumber(stats.imageCount),
+            hint: "公开相册照片",
+            tone: "amber",
+        },
+        {
+            label: "建站天数",
+            value: formatCompactNumber(daysSinceLaunch()),
+            hint: "始于 2026-07-11",
+            tone: "violet",
+        },
+    ];
     const body = `
-        <h1>${escapeHtml(siteName)}</h1>
-        <section class="home-hero">
-            <p>以渺小启程</p>
-        </section>
-        <section class="home-section" aria-labelledby="featured-posts-title">
-            <div class="section-heading">
-                <h2 id="featured-posts-title">精选文章</h2>
-            </div>
-            <div class="post-feed">
-                ${featuredPosts.map((post) => renderPostCard(post, { featured: true })).join("") || '<p class="article-description">暂无精选文章。</p>'}
+        <section class="dashboard-hero" aria-labelledby="dashboard-title">
+            <div>
+                <p class="dashboard-eyebrow">Personal dashboard</p>
+                <h1 id="dashboard-title" class="home-title">${escapeHtml(siteName)}</h1>
+                <p>以渺小启程，把文章、照片和站点动态收进一张安静的控制台。</p>
             </div>
         </section>
-        <section class="home-section" aria-labelledby="latest-posts-title">
-            <div class="section-heading">
-                <h2 id="latest-posts-title">最新文章</h2>
+
+        <section class="dashboard-stats" aria-label="站点概览">
+            ${dashboardStats.map(renderDashboardStatCard).join("")}
+        </section>
+
+        <section class="dashboard-middle">
+            <article class="dashboard-card announcement-card" aria-labelledby="announcements-title">
+                <div class="dashboard-card-heading">
+                    <p class="dashboard-eyebrow">Notice</p>
+                    <h2 id="announcements-title">公告栏</h2>
+                </div>
+                <ol class="announcement-list">
+                    ${renderAnnouncements()}
+                </ol>
+            </article>
+
+            <article class="dashboard-card featured-dashboard-card" aria-labelledby="featured-posts-title">
+                <div class="dashboard-card-heading">
+                    <p class="dashboard-eyebrow">Featured</p>
+                    <h2 id="featured-posts-title">精选文章</h2>
+                </div>
+                <div class="featured-scroll" aria-label="精选文章列表">
+                    ${featuredDisplayPosts.map(renderFeaturedDashboardCard).join("") || '<p class="article-description">暂无精选文章。</p>'}
+                </div>
+            </article>
+        </section>
+
+        <section class="dashboard-card latest-dashboard-card" aria-labelledby="latest-posts-title">
+            <div class="dashboard-card-heading latest-heading">
+                <div>
+                    <p class="dashboard-eyebrow">Latest</p>
+                    <h2 id="latest-posts-title">最新 5 条文章</h2>
+                </div>
+                <a href="/archive/">查看归档</a>
             </div>
-            <div class="post-feed" aria-label="文章列表">
-                ${(latestPosts.length > 0 ? latestPosts : posts).map(renderPostCard).join("")}
+            <div class="latest-post-list" aria-label="最新文章列表">
+                ${latestPosts.map(renderLatestDashboardItem).join("") || '<p class="article-description">暂无文章。</p>'}
             </div>
         </section>
     `;
-    return renderLayout({ title: siteName, active: "/", body, showTitle: false });
+    return renderLayout({
+        title: siteName,
+        active: "/",
+        body,
+        showTitle: false,
+        styles: ["https://fonts.googleapis.com/css2?family=Pacifico&display=swap"],
+    });
+}
+
+function renderDashboardStatCard(stat) {
+    return `
+        <article class="dashboard-stat tone-${escapeAttr(stat.tone)}">
+            <span>${escapeHtml(stat.label)}</span>
+            <strong>${escapeHtml(stat.value)}</strong>
+            <p>${escapeHtml(stat.hint)}</p>
+        </article>
+    `;
+}
+
+function renderAnnouncements() {
+    const announcements = [
+        {
+            date: "2026-07-28",
+            title: "首页仪表盘上线",
+            text: "新增站点概览、公告栏、横向精选文章与最新文章面板。",
+        },
+    ];
+    return announcements.map((item) => `
+        <li>
+            <time datetime="${escapeAttr(item.date)}">${escapeHtml(item.date)}</time>
+            <div>
+                <h3>${escapeHtml(item.title)}</h3>
+                <p>${escapeHtml(item.text)}</p>
+            </div>
+        </li>
+    `).join("");
+}
+
+function renderFeaturedDashboardCard(post) {
+    const coverUrl = post.data.image?.url || "/defaultCover.png";
+    const coverAlt = post.data.image?.alt || `${post.data.title} 的文章封面`;
+    return `
+        <a class="featured-mini-card" href="/posts/${encodeURIComponent(post.id)}/">
+            <img src="${escapeAttr(coverUrl)}" alt="${escapeAttr(coverAlt)}" loading="lazy" />
+            <span>${escapeHtml(formatPostDate(post))}</span>
+            <h3>${escapeHtml(post.data.title)}</h3>
+            <p>${escapeHtml(post.data.description)}</p>
+        </a>
+    `;
+}
+
+function renderLatestDashboardItem(post) {
+    const coverUrl = post.data.image?.url || "/defaultCover.png";
+    const coverAlt = post.data.image?.alt || `${post.data.title} 的文章封面`;
+    return `
+        <article class="latest-dashboard-item">
+            <img src="${escapeAttr(coverUrl)}" alt="${escapeAttr(coverAlt)}" loading="lazy" />
+            <div>
+                <div class="post-card-meta">
+                    <time datetime="${escapeAttr(post.data.pubDate)}">${escapeHtml(formatPostDate(post))}</time>
+                    <span>${escapeHtml(normalizeCategory(post.data.category))}</span>
+                    ${post.data.featured ? '<span class="post-card-badge">精选</span>' : ""}
+                </div>
+                <h3><a href="/posts/${encodeURIComponent(post.id)}/">${escapeHtml(post.data.title)}</a></h3>
+                <p>${escapeHtml(post.data.description)}</p>
+            </div>
+        </article>
+    `;
+}
+
+function formatCompactNumber(value) {
+    return new Intl.NumberFormat("zh-CN", { notation: "compact", maximumFractionDigits: 1 }).format(Number(value || 0));
+}
+
+function daysSinceLaunch(now = new Date()) {
+    const launchDate = new Date("2026-07-11T00:00:00+08:00");
+    const elapsedDays = Math.floor((now.valueOf() - launchDate.valueOf()) / 86400000);
+    return Math.max(1, elapsedDays + 1);
 }
 
 export function renderArchive(posts) {
