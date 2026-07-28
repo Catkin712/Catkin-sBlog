@@ -361,7 +361,7 @@ h1 {
 
 .home-title {
     margin: 0.1rem 0 0.4rem;
-    font-family: Pacifico, "Brush Script MT", "Segoe Script", cursive;
+    font-family: Pacifico, "Segoe Print", "Segoe Script", "Brush Script MT", "STXingkai", "华文行楷", cursive;
     font-size: clamp(2.6rem, 8vw, 4.8rem);
     font-weight: 400;
     line-height: 1.08;

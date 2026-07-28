@@ -8,7 +8,7 @@ param(
 $ErrorActionPreference = "Stop"
 
 $ProjectRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
-$ArchivePath = Join-Path $ProjectRoot $ArchiveName
+$ArchivePath = Join-Path ([System.IO.Path]::GetTempPath()) $ArchiveName
 
 function Step($Message) {
     Write-Host ""
@@ -51,9 +51,10 @@ Run "tar" @(
     "--exclude=dist",
     "--exclude=.astro",
     "--exclude=.wrangler",
+    "--exclude=catkinsblog-vps.tar.gz",
     "--exclude=$ArchiveName",
     "-czf",
-    $ArchiveName,
+    $ArchivePath,
     "."
 )
 

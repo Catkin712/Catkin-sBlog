@@ -5,6 +5,9 @@ import {
     katexCssHref,
     katexScriptHref,
 } from "./admin-editor.mjs";
+import { statSync } from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import {
     formatPostDate,
     getPublishedCategories,
@@ -15,6 +18,7 @@ import {
 
 const siteName = "Catkin's Blog";
 const defaultDescription = "Catkin's Blog 是一个记录技术学习、生活观察和个人内容的轻量博客。";
+const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 
 export function htmlResponse(body, status = 200, headers = {}) {
     return new Response(body, {
@@ -83,7 +87,7 @@ export function renderHome(posts, stats = {}) {
             <div>
                 <p class="dashboard-eyebrow">Personal dashboard</p>
                 <h1 id="dashboard-title" class="home-title">${escapeHtml(siteName)}</h1>
-                <p>以渺小启程，把文章、照片和站点动态收进一张安静的控制台。</p>
+                <p>以渺小启程</p>
             </div>
         </section>
 
@@ -836,7 +840,7 @@ export function renderLayout({
         <title>${escapeHtml(title)}</title>
         <script>try{const t=localStorage.getItem("theme");const d=t?t==="dark":matchMedia("(prefers-color-scheme: dark)").matches;document.documentElement.classList.toggle("dark",d)}catch{}</script>
         <link rel="stylesheet" href="${katexCssHref}" crossorigin="anonymous" />
-        <link rel="stylesheet" href="/site.css" />
+        <link rel="stylesheet" href="${escapeAttr(assetHref("/site.css"))}" />
         ${styles.map((href) => `<link rel="stylesheet" href="${escapeAttr(href)}" />`).join("\n")}
     </head>
     <body>
@@ -853,10 +857,21 @@ export function renderLayout({
             </main>
             ${renderRightSidebar()}
         </div>
-        <script src="/site.js" defer></script>
+        <script src="${escapeAttr(assetHref("/site.js"))}" defer></script>
         ${scripts.map((src) => `<script src="${escapeAttr(src)}" defer></script>`).join("\n")}
     </body>
 </html>`;
+}
+
+function assetHref(pathname) {
+    const normalizedPath = String(pathname || "");
+    const filePath = path.join(projectRoot, "public", normalizedPath.replace(/^\/+/, ""));
+    try {
+        const stat = statSync(filePath);
+        return `${normalizedPath}?v=${Math.round(stat.mtimeMs)}-${stat.size}`;
+    } catch {
+        return normalizedPath;
+    }
 }
 
 function renderRightSidebar() {
