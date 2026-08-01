@@ -5,8 +5,8 @@ import path from "node:path";
 import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import { DatabaseSync } from "node:sqlite";
-import { albumStoragePaths } from "./album-storage.mjs";
-import { mediaUrl } from "./cos.mjs";
+import { albumStoragePaths, resolveUploadedFile } from "./album-storage.mjs";
+import { deleteCosObject, mediaUrl } from "./cos.mjs";
 
 const databases = new Map();
 const maxPhotoCount = 20;
@@ -24,6 +24,15 @@ export class AlbumError extends Error {
 export function listAlbums(env = {}, includeInner = false) {
     const db = getDatabase(env);
     const visibleUpload = includeInner ? "1 = 1" : "u.visibility = 'public'";
+    const albumFilter = includeInner ? "" : `
+        WHERE EXISTS (
+            SELECT 1
+            FROM album_uploads visible_au
+            JOIN uploads visible_u ON visible_u.id = visible_au.upload_id
+            JOIN photos visible_p ON visible_p.upload_id = visible_u.id
+            WHERE visible_au.album_id = a.id AND visible_u.visibility = 'public'
+        )
+    `;
     return db.prepare(`
         SELECT
             a.id,
@@ -52,6 +61,7 @@ export function listAlbums(env = {}, includeInner = false) {
                 LIMIT 1
             ) AS coverUrl
         FROM albums a
+        ${albumFilter}
         ORDER BY a.created_at DESC, a.id DESC
     `).all().map((row) => normalizeAlbumRow(row, env));
 }
@@ -398,6 +408,132 @@ export function isInnerUpload(env = {}, uploadIdValue) {
     return upload.visibility === "inner";
 }
 
+export function listAlbumUploadsForAdmin(env = {}) {
+    const db = getDatabase(env);
+    return {
+        albums: db.prepare("SELECT id, name FROM albums ORDER BY name COLLATE NOCASE ASC, id ASC")
+            .all()
+            .map(normalizeId),
+        uploads: db.prepare(`
+            SELECT
+                u.id,
+                u.people,
+                u.location,
+                u.message,
+                u.visibility,
+                u.created_at AS createdAt,
+                p.nickname,
+                p.avatar_url AS avatarUrl
+            FROM uploads u
+            JOIN uploaders p ON p.id = u.uploader_id
+            ORDER BY u.created_at DESC, u.id DESC
+        `).all().map((upload) => hydrateAdminUpload(db, env, upload)),
+    };
+}
+
+export function updateAlbumUploadForAdmin(env = {}, uploadIdValue, payload = {}) {
+    const db = getDatabase(env);
+    const uploadId = positiveInteger(uploadIdValue, "上传记录不存在");
+    const current = db.prepare(`
+        SELECT u.*, p.avatar_url
+        FROM uploads u
+        JOIN uploaders p ON p.id = u.uploader_id
+        WHERE u.id = ?
+    `).get(uploadId);
+    if (!current) throw new AlbumError("上传记录不存在", 404);
+
+    const nickname = normalizeRequiredText(payload.nickname, 24, "请填写上传者昵称");
+    const people = normalizeText(payload.people, 80);
+    const location = normalizeText(payload.location, 80);
+    const message = normalizeText(payload.message, 500, true);
+    const visibility = String(payload.visibility || "");
+    if (!["public", "inner"].includes(visibility)) throw new AlbumError("请选择表图或里图");
+    const createdAt = normalizeAdminDate(payload.createdAt || current.created_at);
+    const albumIds = [...new Set((payload.albumIds || []).map(Number).filter(Number.isInteger))];
+    if (albumIds.length === 0) throw new AlbumError("请至少选择一个相册");
+    const validAlbumIds = albumIds.filter((id) => db.prepare("SELECT 1 FROM albums WHERE id = ?").get(id));
+    if (validAlbumIds.length !== albumIds.length) throw new AlbumError("选择的相册中有一个已不存在");
+
+    db.exec("BEGIN IMMEDIATE");
+    try {
+        let uploader = db.prepare("SELECT id FROM uploaders WHERE nickname_key = ?").get(normalizeKey(nickname));
+        if (!uploader) {
+            const now = new Date().toISOString();
+            const result = db.prepare(`
+                INSERT INTO uploaders (nickname, nickname_key, avatar_url, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?)
+            `).run(nickname, normalizeKey(nickname), current.avatar_url, now, now);
+            uploader = { id: result.lastInsertRowid };
+        }
+        db.prepare(`
+            UPDATE uploads
+            SET uploader_id = ?, people = ?, location = ?, message = ?, visibility = ?, created_at = ?
+            WHERE id = ?
+        `).run(uploader.id, people, location, message, visibility, createdAt, uploadId);
+        db.prepare("DELETE FROM album_uploads WHERE upload_id = ?").run(uploadId);
+        const insertAlbum = db.prepare("INSERT INTO album_uploads (album_id, upload_id) VALUES (?, ?)");
+        albumIds.forEach((albumId) => insertAlbum.run(albumId, uploadId));
+        db.exec("COMMIT");
+    } catch (error) {
+        db.exec("ROLLBACK");
+        throw error;
+    }
+    return getAdminUpload(db, env, uploadId);
+}
+
+export function updateAlbumPhotoForAdmin(env = {}, photoIdValue, payload = {}) {
+    const db = getDatabase(env);
+    const photoId = positiveInteger(photoIdValue, "照片不存在");
+    const originalName = normalizeRequiredText(payload.originalName, 160, "请填写照片名称");
+    const result = db.prepare("UPDATE photos SET original_name = ? WHERE id = ?").run(originalName, photoId);
+    if (Number(result.changes) === 0) throw new AlbumError("照片不存在", 404);
+    const photo = db.prepare(`
+        SELECT id, upload_id AS uploadId, public_url AS url, original_name AS originalName,
+               mime_type AS mimeType, byte_size AS byteSize, sort_order AS sortOrder
+        FROM photos
+        WHERE id = ?
+    `).get(photoId);
+    return normalizeAdminPhoto(photo, env);
+}
+
+export async function deleteAlbumPhotoForAdmin(env = {}, photoIdValue) {
+    const db = getDatabase(env);
+    const photoId = positiveInteger(photoIdValue, "照片不存在");
+    const photo = db.prepare("SELECT id, upload_id AS uploadId, public_url AS storedUrl FROM photos WHERE id = ?")
+        .get(photoId);
+    if (!photo) throw new AlbumError("照片不存在", 404);
+
+    db.exec("BEGIN IMMEDIATE");
+    let uploadDeleted = false;
+    try {
+        db.prepare("DELETE FROM photos WHERE id = ?").run(photoId);
+        const remaining = Number(db.prepare("SELECT COUNT(*) AS count FROM photos WHERE upload_id = ?")
+            .get(photo.uploadId)?.count || 0);
+        if (remaining === 0) {
+            db.prepare("DELETE FROM uploads WHERE id = ?").run(photo.uploadId);
+            uploadDeleted = true;
+        } else {
+            const remainingPhotos = db.prepare("SELECT id FROM photos WHERE upload_id = ? ORDER BY sort_order ASC, id ASC")
+                .all(photo.uploadId);
+            const reorder = db.prepare("UPDATE photos SET sort_order = ? WHERE id = ?");
+            remainingPhotos.forEach((item, index) => reorder.run(index, item.id));
+        }
+        db.exec("COMMIT");
+    } catch (error) {
+        db.exec("ROLLBACK");
+        throw error;
+    }
+
+    let cleanupWarning = "";
+    try {
+        await deleteStoredPhoto(env, photo.storedUrl);
+    } catch (error) {
+        cleanupWarning = "数据库记录已删除，但存储文件清理失败";
+        console.error(`Album photo ${photoId} storage cleanup failed:`, error);
+    }
+    return { id: photoId, uploadId: Number(photo.uploadId), uploadDeleted, cleanupWarning };
+}
+
 function getDatabase(env) {
     const { databaseFile } = albumStoragePaths(env);
     if (databases.has(databaseFile)) {
@@ -569,6 +705,82 @@ function publicUrlToFile(env, publicUrl) {
 function findAlbumByName(db, name) {
     return db.prepare("SELECT id, name, created_at AS createdAt FROM albums WHERE name_key = ?")
         .get(normalizeKey(name));
+}
+
+function getAdminUpload(db, env, uploadId) {
+    const upload = db.prepare(`
+        SELECT
+            u.id,
+            u.people,
+            u.location,
+            u.message,
+            u.visibility,
+            u.created_at AS createdAt,
+            p.nickname,
+            p.avatar_url AS avatarUrl
+        FROM uploads u
+        JOIN uploaders p ON p.id = u.uploader_id
+        WHERE u.id = ?
+    `).get(uploadId);
+    if (!upload) throw new AlbumError("上传记录不存在", 404);
+    return hydrateAdminUpload(db, env, upload);
+}
+
+function hydrateAdminUpload(db, env, upload) {
+    const photos = db.prepare(`
+        SELECT id, upload_id AS uploadId, public_url AS url, original_name AS originalName,
+               mime_type AS mimeType, byte_size AS byteSize, sort_order AS sortOrder
+        FROM photos
+        WHERE upload_id = ?
+        ORDER BY sort_order ASC, id ASC
+    `).all(upload.id).map((photo) => normalizeAdminPhoto(photo, env));
+    const albums = db.prepare(`
+        SELECT a.id, a.name
+        FROM albums a
+        JOIN album_uploads au ON au.album_id = a.id
+        WHERE au.upload_id = ?
+        ORDER BY a.name COLLATE NOCASE ASC, a.id ASC
+    `).all(upload.id).map(normalizeId);
+    return {
+        ...upload,
+        id: Number(upload.id),
+        avatarUrl: mediaUrl(env, upload.avatarUrl),
+        albums,
+        photos,
+        likeCount: Number(db.prepare("SELECT COUNT(*) AS count FROM likes WHERE upload_id = ?").get(upload.id)?.count || 0),
+        commentCount: Number(db.prepare("SELECT COUNT(*) AS count FROM comments WHERE upload_id = ?").get(upload.id)?.count || 0),
+    };
+}
+
+function normalizeAdminPhoto(photo, env) {
+    return {
+        ...photo,
+        id: Number(photo.id),
+        uploadId: Number(photo.uploadId),
+        url: mediaUrl(env, photo.url),
+        byteSize: Number(photo.byteSize),
+        sortOrder: Number(photo.sortOrder),
+    };
+}
+
+function normalizeAdminDate(value) {
+    const date = new Date(String(value || ""));
+    if (Number.isNaN(date.valueOf())) throw new AlbumError("上传时间格式无效");
+    return date.toISOString();
+}
+
+async function deleteStoredPhoto(env, storedUrl) {
+    const value = String(storedUrl || "");
+    if (value.startsWith("cos:")) {
+        await deleteCosObject(env, value.slice(4));
+        return;
+    }
+    if (value.startsWith("/uploads/")) {
+        const filePath = resolveUploadedFile(env, value);
+        if (filePath) await unlink(filePath).catch((error) => {
+            if (error.code !== "ENOENT") throw error;
+        });
+    }
 }
 
 function existingUploadId(env, value) {

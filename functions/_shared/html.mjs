@@ -152,6 +152,11 @@ function renderDashboardStatCard(stat) {
 function renderAnnouncements() {
     const announcements = [
         {
+            date: "2026-08-01",
+            title: "文章互动功能上线",
+            text: "文章页新增点赞和评论，填写昵称即可参与互动。",
+        },
+        {
             date: "2026-07-28",
             title: "首页仪表盘上线",
             text: "新增站点概览、公告栏、横向精选文章与最新文章面板。",
@@ -272,6 +277,7 @@ export function renderArticle(post) {
                     </footer>`
             : ""
         }
+            ${renderPostReactions(post)}
         </article>
     `;
     return renderLayout({
@@ -279,6 +285,7 @@ export function renderArticle(post) {
         description: post.data.description,
         body,
         showTitle: false,
+        scripts: ["/post-reactions.js"],
     });
 }
 
@@ -486,6 +493,7 @@ export function renderAdminPage() {
             button, input, textarea { font: inherit; }
             button { border: 1px solid #d9dee7; border-radius: 6px; background: #fff; cursor: pointer; padding: 0.45rem 0.75rem; }
             button.primary { border-color: #216869; background: #216869; color: #fff; }
+            .actions a { border: 1px solid #d9dee7; border-radius: 6px; background: #fff; color: #20242c; padding: 0.45rem 0.75rem; text-decoration: none; }
             .layout { display: grid; grid-template-columns: 280px minmax(0, 1fr); min-height: calc(100vh - 57px); }
             aside { border-right: 1px solid #d9dee7; background: #fff; padding: 1rem; overflow: auto; }
             main { padding: 1rem; }
@@ -545,6 +553,7 @@ ${adminEditorStyles}
         <header>
             <h1>Catkin's Blog Admin</h1>
             <div class="actions">
+                <a href="/admin/albums/">管理相册</a>
                 <button id="newPost" type="button">新文章</button>
                 <button id="refreshPosts" type="button">刷新</button>
                 <button id="logout" type="button">退出</button>
@@ -815,6 +824,51 @@ function renderPostCard(post, options = {}) {
     `;
 }
 
+function renderPostReactions(post) {
+    const likes = post.reactions?.likes || [];
+    const comments = post.reactions?.comments || [];
+    return `
+        <section class="post-reactions" data-post-reactions data-post-slug="${escapeAttr(post.slug)}" aria-labelledby="post-reactions-title">
+            <header class="post-reactions-header">
+                <div>
+                    <h2 id="post-reactions-title">互动</h2>
+                    <p class="post-reaction-summary" aria-live="polite">
+                        <span data-like-count>${likes.length}</span> 人点赞 · <span data-comment-count>${comments.length}</span> 条评论
+                    </p>
+                </div>
+                <div class="post-reaction-actions">
+                    <button type="button" data-post-action="like" aria-expanded="false">♡ 点赞</button>
+                    <button type="button" data-post-action="comment" aria-expanded="false">评论</button>
+                </div>
+            </header>
+            <div class="post-reaction-content ${(likes.length || comments.length) ? "has-content" : ""}">
+                <p class="post-like-list" data-like-list ${likes.length ? "" : "hidden"}>♥ <span>${likes.map((like) => escapeHtml(like.nickname)).join("、")}</span></p>
+                <div class="post-comment-list" data-comment-list>
+                    ${comments.map(renderPostComment).join("")}
+                </div>
+            </div>
+            ${renderPostReactionForm("like")}
+            ${renderPostReactionForm("comment")}
+        </section>
+    `;
+}
+
+function renderPostReactionForm(type) {
+    const isComment = type === "comment";
+    return `
+        <form class="post-reaction-form" data-post-reaction-form="${type}" hidden>
+            <input name="nickname" maxlength="24" required placeholder="你的昵称" aria-label="你的昵称" />
+            ${isComment ? '<textarea name="content" maxlength="240" required placeholder="写下评论" aria-label="评论内容" rows="3"></textarea>' : ""}
+            <button type="submit">${isComment ? "发送" : "确认点赞"}</button>
+            <p class="post-reaction-status" role="status"></p>
+        </form>
+    `;
+}
+
+function renderPostComment(comment) {
+    return `<p data-comment-id="${Number(comment.id)}"><strong>${escapeHtml(comment.nickname)}：</strong><span>${escapeHtml(comment.content)}</span></p>`;
+}
+
 function renderTagLink(tag, count = null) {
     const label = count === null ? tag : `${tag} (${count})`;
     return `<a href="/tags/${encodeURIComponent(tag)}/">${escapeHtml(label)}</a>`;
@@ -1000,7 +1054,7 @@ function renderSidebar(active) {
                 <a class="profile" href="/" aria-label="Catkin 的首页">
                     <img src="/avatar.png" alt="Catkin 的头像" width="96" height="96" />
                     <span class="profile-name">Catkin</span>
-                    <span class="profile-signature">以渺小启程</span>
+                    <span class="profile-signature">这里是絮絮絮絮絮絮喵</span>
                 </a>
                 <nav aria-label="主导航">
                     <div id="main-menu" class="nav-links">

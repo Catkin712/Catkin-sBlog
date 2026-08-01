@@ -926,6 +926,153 @@ h1 {
     font-weight: 700;
 }
 
+.post-reactions {
+    display: grid;
+    gap: 0.75rem;
+    margin-top: 1.5rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--line-color);
+}
+
+.post-reactions-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.post-reactions-header h2 {
+    margin: 0;
+    font-size: 1.05rem;
+}
+
+.post-reaction-summary {
+    margin: 0.25rem 0 0;
+    color: var(--muted-color);
+    font-size: 0.82rem;
+}
+
+.post-reaction-actions {
+    display: flex;
+    gap: 0.4rem;
+}
+
+.post-reaction-actions button,
+.post-reaction-form button {
+    min-height: 2.35rem;
+    border: 1px solid var(--line-color);
+    border-radius: 6px;
+    background: var(--page-bg);
+    color: var(--text-color);
+    cursor: pointer;
+    font: inherit;
+    font-weight: 700;
+    padding: 0.45rem 0.75rem;
+}
+
+.post-reaction-actions button:hover,
+.post-reaction-actions button:focus,
+.post-reaction-actions button[aria-expanded="true"] {
+    border-color: var(--accent-color);
+    color: var(--accent-color);
+}
+
+.post-reaction-content {
+    display: none;
+    background: color-mix(in srgb, var(--page-bg) 84%, var(--panel-bg));
+    padding: 0.7rem 0.8rem;
+    font-size: 0.88rem;
+}
+
+.post-reaction-content.has-content {
+    display: block;
+}
+
+.post-like-list {
+    margin: 0;
+    color: #a33f55;
+    overflow-wrap: anywhere;
+}
+
+.post-like-list span {
+    color: var(--text-color);
+}
+
+.post-comment-list:not(:empty) {
+    margin-top: 0.55rem;
+    padding-top: 0.45rem;
+    border-top: 1px solid var(--line-color);
+}
+
+.post-comment-list p {
+    margin: 0.35rem 0;
+    overflow-wrap: anywhere;
+}
+
+.post-comment-list strong {
+    color: var(--accent-color);
+}
+
+.post-comment-list span {
+    white-space: pre-wrap;
+}
+
+.post-reaction-form {
+    display: grid;
+    grid-template-columns: minmax(8rem, 0.7fr) minmax(12rem, 1.3fr) auto;
+    gap: 0.5rem;
+}
+
+.post-reaction-form[hidden] {
+    display: none;
+}
+
+.post-reaction-form[data-post-reaction-form="like"] {
+    grid-template-columns: minmax(8rem, 1fr) auto;
+}
+
+.post-reaction-form input,
+.post-reaction-form textarea {
+    width: 100%;
+    border: 1px solid var(--line-color);
+    border-radius: 6px;
+    background: var(--page-bg);
+    color: var(--text-color);
+    padding: 0.62rem 0.7rem;
+    font: inherit;
+}
+
+.post-reaction-form textarea {
+    min-height: 4.5rem;
+    resize: vertical;
+}
+
+.post-reaction-form input:focus,
+.post-reaction-form textarea:focus {
+    border-color: var(--accent-color);
+    outline: 2px solid color-mix(in srgb, var(--accent-color) 18%, transparent);
+}
+
+.post-reaction-form button {
+    align-self: start;
+    border-color: var(--accent-color);
+    background: var(--accent-color);
+    color: var(--panel-bg);
+}
+
+.post-reaction-form button:disabled {
+    cursor: wait;
+    opacity: 0.65;
+}
+
+.post-reaction-status {
+    grid-column: 1 / -1;
+    min-height: 1em;
+    margin: 0;
+    color: #a33f55;
+    font-size: 0.78rem;
+}
+
 .tag-card {
     display: block;
     padding: 1rem;
@@ -1312,6 +1459,20 @@ h1 {
         max-width: none;
         justify-self: start;
         width: 100%;
+    }
+
+    .post-reactions-header {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .post-reaction-form,
+    .post-reaction-form[data-post-reaction-form="like"] {
+        grid-template-columns: 1fr;
+    }
+
+    .post-reaction-form button {
+        justify-self: start;
     }
 
     .guestbook-sky {

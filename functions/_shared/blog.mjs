@@ -28,6 +28,14 @@ export function clearPostCache() {
     // SQLite is the source of truth and writes are visible immediately.
 }
 
+export class BlogError extends Error {
+    constructor(message, status = 400) {
+        super(message);
+        this.name = "BlogError";
+        this.status = status;
+    }
+}
+
 export async function getAllPosts(env = {}) {
     const db = await getReadyDatabase(env);
     return db.prepare("SELECT * FROM posts ORDER BY pub_date DESC, slug ASC")
@@ -44,10 +52,15 @@ export async function getPublishedPosts(env = {}) {
 
 export async function getPublishedPost(env = {}, slug) {
     assertSlug(slug);
-    const row = (await getReadyDatabase(env))
+    const db = await getReadyDatabase(env);
+    const row = db
         .prepare("SELECT * FROM posts WHERE slug = ? AND draft = 0")
         .get(slug);
-    return row ? rowToPost(row, env) : null;
+    if (!row) return null;
+    return {
+        ...rowToPost(row, env),
+        reactions: listPostReactions(db, slug),
+    };
 }
 
 export async function readPost(env = {}, slug) {
@@ -156,6 +169,44 @@ export async function writePost(env = {}, slug, payload = {}) {
     }
 }
 
+export async function addPostLike(env = {}, slug, payload = {}) {
+    const db = await getReadyDatabase(env);
+    assertPublishedPost(db, slug);
+    const nickname = normalizeRequiredPostText(payload.nickname, 24, "请填写昵称");
+    try {
+        const result = db.prepare(`
+            INSERT INTO post_likes (post_slug, nickname, nickname_key, created_at)
+            VALUES (?, ?, ?, ?)
+        `).run(slug, nickname, normalizePostKey(nickname), new Date().toISOString());
+        return normalizeReactionRow(db.prepare(`
+            SELECT id, nickname, created_at AS createdAt
+            FROM post_likes
+            WHERE id = ?
+        `).get(result.lastInsertRowid));
+    } catch (error) {
+        if (String(error.message).includes("UNIQUE")) {
+            throw new BlogError("这个昵称已经点过赞了", 409);
+        }
+        throw error;
+    }
+}
+
+export async function addPostComment(env = {}, slug, payload = {}) {
+    const db = await getReadyDatabase(env);
+    assertPublishedPost(db, slug);
+    const nickname = normalizeRequiredPostText(payload.nickname, 24, "请填写昵称");
+    const content = normalizeRequiredPostText(payload.content, 240, "请填写评论内容", true);
+    const result = db.prepare(`
+        INSERT INTO post_comments (post_slug, nickname, content, created_at)
+        VALUES (?, ?, ?, ?)
+    `).run(slug, nickname, content, new Date().toISOString());
+    return normalizeReactionRow(db.prepare(`
+        SELECT id, nickname, content, created_at AS createdAt
+        FROM post_comments
+        WHERE id = ?
+    `).get(result.lastInsertRowid));
+}
+
 export function publicPostSummary(post) {
     return {
         title: post.data.title,
@@ -220,10 +271,29 @@ function getDatabase(env) {
             key TEXT PRIMARY KEY,
             value TEXT NOT NULL
         );
+        CREATE TABLE IF NOT EXISTS post_likes (
+            id INTEGER PRIMARY KEY,
+            post_slug TEXT NOT NULL REFERENCES posts(slug) ON DELETE CASCADE,
+            nickname TEXT NOT NULL,
+            nickname_key TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            UNIQUE (post_slug, nickname_key)
+        );
+        CREATE TABLE IF NOT EXISTS post_comments (
+            id INTEGER PRIMARY KEY,
+            post_slug TEXT NOT NULL REFERENCES posts(slug) ON DELETE CASCADE,
+            nickname TEXT NOT NULL,
+            content TEXT NOT NULL,
+            created_at TEXT NOT NULL
+        );
         CREATE INDEX IF NOT EXISTS idx_posts_published
             ON posts(draft, pub_date DESC);
         CREATE INDEX IF NOT EXISTS idx_posts_category
             ON posts(category, draft, pub_date DESC);
+        CREATE INDEX IF NOT EXISTS idx_post_likes_slug
+            ON post_likes(post_slug, created_at);
+        CREATE INDEX IF NOT EXISTS idx_post_comments_slug
+            ON post_comments(post_slug, created_at);
     `);
     databases.set(databaseFile, db);
     return db;
@@ -322,6 +392,52 @@ function rowToPost(row, env) {
         body: row.body,
         html: marked.parse(row.body),
     };
+}
+
+function listPostReactions(db, slug) {
+    return {
+        likes: db.prepare(`
+            SELECT id, nickname, created_at AS createdAt
+            FROM post_likes
+            WHERE post_slug = ?
+            ORDER BY created_at ASC, id ASC
+        `).all(slug).map(normalizeReactionRow),
+        comments: db.prepare(`
+            SELECT id, nickname, content, created_at AS createdAt
+            FROM post_comments
+            WHERE post_slug = ?
+            ORDER BY created_at ASC, id ASC
+        `).all(slug).map(normalizeReactionRow),
+    };
+}
+
+function assertPublishedPost(db, slug) {
+    try {
+        assertSlug(slug);
+    } catch {
+        throw new BlogError("文章不存在", 404);
+    }
+    if (!db.prepare("SELECT 1 FROM posts WHERE slug = ? AND draft = 0").get(slug)) {
+        throw new BlogError("文章不存在", 404);
+    }
+}
+
+function normalizeReactionRow(row) {
+    return { ...row, id: Number(row.id) };
+}
+
+function normalizeRequiredPostText(value, maxLength, message, preserveLines = false) {
+    const text = String(value ?? "").normalize("NFKC").replace(/\0/g, "").trim();
+    const normalized = preserveLines
+        ? text.replace(/\r\n?/g, "\n").replace(/\n{3,}/g, "\n\n")
+        : text.replace(/\s+/g, " ");
+    const limited = [...normalized].slice(0, maxLength).join("");
+    if (!limited) throw new BlogError(message);
+    return limited;
+}
+
+function normalizePostKey(value) {
+    return normalizeRequiredPostText(value, 80, "请填写昵称").toLocaleLowerCase("zh-CN");
 }
 
 function parsePost(slug, markdown) {
