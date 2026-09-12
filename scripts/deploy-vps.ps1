@@ -70,6 +70,7 @@ $remoteScript = @(
     "tar -xzf $archiveNameArg",
     "npm install",
     "npm run build",
+    "npm run migrate:bingxi",
     "(pm2 restart $pm2NameArg --update-env || pm2 start npm --name $pm2NameArg -- start)",
     "pm2 save"
 ) -join " && "

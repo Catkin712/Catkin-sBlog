@@ -106,27 +106,29 @@ export function renderHome(posts, stats = {}) {
                 </ol>
             </article>
 
-            <article class="dashboard-card featured-dashboard-card" aria-labelledby="featured-posts-title">
+            <section class="dashboard-card latest-dashboard-card" aria-labelledby="latest-posts-title">
                 <div class="dashboard-card-heading">
+                    <div>
+                        <p class="dashboard-eyebrow">Latest</p>
+                        <h2 id="latest-posts-title">最新 5 篇文章</h2>
+                    </div>
+                    <a href="/archive/">查看归档</a>
+                </div>
+                <div class="latest-post-list" aria-label="最新文章列表">
+                    ${latestPosts.map(renderLatestDashboardItem).join("") || '<p class="article-description">暂无文章。</p>'}
+                </div>
+            </section>
+        </section>
+
+        <section class="dashboard-card featured-dashboard-card" aria-labelledby="featured-posts-title">
+            <div class="dashboard-card-heading">
+                <div>
                     <p class="dashboard-eyebrow">Featured</p>
                     <h2 id="featured-posts-title">精选文章</h2>
                 </div>
-                <div class="featured-scroll" aria-label="精选文章列表">
-                    ${featuredDisplayPosts.map(renderFeaturedDashboardCard).join("") || '<p class="article-description">暂无精选文章。</p>'}
-                </div>
-            </article>
-        </section>
-
-        <section class="dashboard-card latest-dashboard-card" aria-labelledby="latest-posts-title">
-            <div class="dashboard-card-heading latest-heading">
-                <div>
-                    <p class="dashboard-eyebrow">Latest</p>
-                    <h2 id="latest-posts-title">最新 5 条文章</h2>
-                </div>
-                <a href="/archive/">查看归档</a>
             </div>
-            <div class="latest-post-list" aria-label="最新文章列表">
-                ${latestPosts.map(renderLatestDashboardItem).join("") || '<p class="article-description">暂无文章。</p>'}
+            <div class="featured-list" aria-label="精选文章列表">
+                ${featuredDisplayPosts.map(renderFeaturedDashboardCard).join("") || '<p class="article-description">暂无精选文章。</p>'}
             </div>
         </section>
     `;
@@ -322,9 +324,11 @@ export function renderCategoriesIndex(posts) {
                     (post) => normalizeCategory(post.data.category) === category,
                 );
                 return `
-                        <section class="category-group">
-                            <h2><a href="/categories/${encodeURIComponent(category)}/">${escapeHtml(category)}</a></h2>
-                            <p>${categoryPosts.length} 篇文章</p>
+                        <details class="category-group">
+                            <summary>
+                                <span class="category-summary-title">${escapeHtml(category)}</span>
+                                <span class="category-summary-count">${categoryPosts.length} 篇文章</span>
+                            </summary>
                             <ol>
                                 ${categoryPosts
                         .map(
@@ -337,7 +341,7 @@ export function renderCategoriesIndex(posts) {
                         )
                         .join("")}
                             </ol>
-                        </section>
+                        </details>
                     `;
             })
             .join("")}
