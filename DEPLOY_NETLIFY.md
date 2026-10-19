@@ -85,6 +85,53 @@ git push -u AstroTest netlify-migration
 
 不要设置 `BLOG_DB_FILE`、`ALBUM_DATA_DIR`、`UPLOADS_DIR`、`SQLITE_JOURNAL_MODE`、`CATKINS_USE_BLOBS`；函数运行时会自动设置。
 
+#### 直接导入 VPS 的 .env
+
+可以。我已经把 VPS 的 `.env` 和 `.env.local` 合并、转换成 Netlify 可导入的 `.env.netlify`（在项目根目录，已被 `.gitignore` 忽略）。它包含：
+
+- VPS `.env` 里的 `ADMIN_*`、`COS_*`
+- VPS `.env.local` 里的 `ADMIN_EXTRA_USERS`
+- 补充的 `ALBUM_INNER_PASSWORD`（默认 `妄想清高`）
+- 自动生成的 `ALBUM_MODE_SESSION_SECRET`
+- `SITE_VISITOR_SEED=8042`
+- `AWS_LAMBDA_JS_RUNTIME=nodejs24.x`
+- `TZ=Asia/Shanghai`
+- 去掉了 Netlify 不需要的 `HOST`、`PORT`、`GITHUB_*`
+
+在 Netlify 创建好站点、拿到 Site ID（**Project configuration → General → Project information**）后：
+
+```powershell
+npx netlify login
+npx netlify env:import .env.netlify --site <SITE_ID>
+```
+
+如果已经用 `npx netlify link` 绑定过站点，可以省略 `--site`：
+
+```powershell
+npx netlify env:import .env.netlify
+```
+
+`env:import` 默认是**合并**，不会删除 Netlify 上已有的变量；不要加 `--replace-existing`，除非你确定要清空后重导。
+
+导入后检查：
+
+```powershell
+npx netlify env:list --site <SITE_ID>
+```
+
+重点确认 `ADMIN_SESSION_SECRET` 已存在，并且值与 VPS 上完全一致；`ALBUM_MODE_SESSION_SECRET` 不要和 `ADMIN_SESSION_SECRET` 相同。
+
+如果 VPS 上的 `.env` 后来又改了，重新生成：
+
+```powershell
+scp catkinblog:/var/www/catkinsblog/.env "$env:TEMP\server.env"
+scp catkinblog:/var/www/catkinsblog/.env.local "$env:TEMP\server.env.local"
+node scripts/prepare-netlify-env.mjs "$env:TEMP\server.env" "$env:TEMP\server.env.local" .env.netlify
+npx netlify env:import .env.netlify --site <SITE_ID>
+```
+
+`.env.netlify` 里有明文密钥，导入完成后可以删除；不要提交到 Git。
+
 如果之后修改了 `ADMIN_SESSION_SECRET`，需要重新加密种子库，否则首次读取会解密失败：
 
 ```powershell
