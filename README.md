@@ -1,5 +1,7 @@
 # Catkin's Blog
 
+> **2026-10 迁移中：** 站点正在从 VPS 迁移到 Netlify。部署步骤、环境变量和验收清单见 [DEPLOY_NETLIFY.md](./DEPLOY_NETLIFY.md)。本地仍可用 `npm start` 以 VPS 模式运行。
+
 Catkin's Blog 是一个基于 Astro 7 的个人博客项目。当前线上部署方式是 VPS 自托管：Astro 负责构建静态资源，`server.mjs` 在 Node.js 中运行原 `functions` 目录里的动态页面和后台 API，Nginx 对外提供访问并反向代理到 Node 服务。
 
 ## 在线访问

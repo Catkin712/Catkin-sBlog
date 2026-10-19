@@ -15,7 +15,7 @@ export function getAdminConfigError(env) {
         return "";
     }
 
-    return `缺少后台登录环境变量：${[...new Set(missing)].join(", ")}。请在 Cloudflare Pages 的 Environment variables 中配置后重新部署。`;
+    return `缺少后台登录环境变量：${[...new Set(missing)].join(", ")}。请在 Netlify 的 Environment variables 中配置后重新部署。`;
 }
 
 export function getAdminAccounts(env) {

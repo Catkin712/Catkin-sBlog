@@ -5,9 +5,6 @@ import {
     katexCssHref,
     katexScriptHref,
 } from "./admin-editor.mjs";
-import { statSync } from "node:fs";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
 import {
     formatPostDate,
     getPublishedCategories,
@@ -18,7 +15,6 @@ import {
 
 const siteName = "Catkin's Blog";
 const defaultDescription = "Catkin's Blog 是一个记录技术学习、生活观察和个人内容的轻量博客。";
-const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 
 export function htmlResponse(body, status = 200, headers = {}) {
     return new Response(body, {
@@ -922,14 +918,7 @@ export function renderLayout({
 }
 
 function assetHref(pathname) {
-    const normalizedPath = String(pathname || "");
-    const filePath = path.join(projectRoot, "public", normalizedPath.replace(/^\/+/, ""));
-    try {
-        const stat = statSync(filePath);
-        return `${normalizedPath}?v=${Math.round(stat.mtimeMs)}-${stat.size}`;
-    } catch {
-        return normalizedPath;
-    }
+    return String(pathname || "");
 }
 
 function renderRightSidebar() {

@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { getBlobStore } from "./blob-store.mjs";
 import { AlbumError, createUploadFromCosObjects } from "./albums.mjs";
 import {
     cosObjectUrl,
@@ -10,6 +11,8 @@ import {
 } from "./cos.mjs";
 
 const sessions = new Map();
+const sessionStoreName = "catkinsblog-upload-sessions";
+const sessionTtlMs = 15 * 60 * 1000;
 const maxPhotoBytes = 20 * 1024 * 1024;
 const maxAvatarBytes = 5 * 1024 * 1024;
 const maxPhotoCount = 20;
@@ -74,23 +77,26 @@ export async function createCosUploadSession(env = {}, payload = {}) {
             };
         })()
         : null;
-    sessions.set(sessionId, {
+    const session = {
         createdAt: Date.now(),
         values,
         photos: photoUploads,
         avatar: avatarUpload,
-    });
-    const cleanupTimer = setTimeout(() => {
-        const current = sessions.get(sessionId);
-        if (!current) return;
-        sessions.delete(sessionId);
-        void Promise.all([
-            ...current.photos.map((photo) => deleteCosObject(env, photo.key).catch(() => {})),
-            current.avatar ? deleteCosObject(env, current.avatar.key).catch(() => {}) : null,
-        ].filter(Boolean));
-    }, 15 * 60 * 1000);
-    cleanupTimer.unref?.();
-    pruneSessions(env);
+    };
+    await saveSession(env, sessionId, session);
+    if (!usesBlobSessions(env)) {
+        const cleanupTimer = setTimeout(() => {
+            const current = sessions.get(sessionId);
+            if (!current) return;
+            sessions.delete(sessionId);
+            void Promise.all([
+                ...current.photos.map((photo) => deleteCosObject(env, photo.key).catch(() => {})),
+                current.avatar ? deleteCosObject(env, current.avatar.key).catch(() => {}) : null,
+            ].filter(Boolean));
+        }, sessionTtlMs);
+        cleanupTimer.unref?.();
+        pruneSessions(env);
+    }
     return {
         sessionId,
         expiresIn: 600,
@@ -100,9 +106,9 @@ export async function createCosUploadSession(env = {}, payload = {}) {
 
 export async function completeCosUploadSession(env = {}, sessionId) {
     const id = String(sessionId || "");
-    const session = sessions.get(id);
-    if (!session || Date.now() - session.createdAt > 15 * 60 * 1000) {
-        sessions.delete(id);
+    const session = await loadSession(env, id);
+    if (!session || Date.now() - session.createdAt > sessionTtlMs) {
+        await removeSession(env, id);
         throw new AlbumError("上传会话已过期，请重新选择照片", 410);
     }
 
@@ -119,16 +125,52 @@ export async function completeCosUploadSession(env = {}, sessionId) {
             photos: uploadedPhotos,
             avatar: uploadedAvatar,
         });
-        sessions.delete(id);
+        await removeSession(env, id);
         return upload;
     } catch (error) {
         await Promise.all([
             ...session.photos.map((photo) => deleteCosObject(env, photo.key).catch(() => {})),
             session.avatar ? deleteCosObject(env, session.avatar.key).catch(() => {}) : null,
         ].filter(Boolean));
-        sessions.delete(id);
+        await removeSession(env, id);
         throw error;
     }
+}
+
+function usesBlobSessions(env) {
+    return String(env.CATKINS_USE_BLOBS || env.NETLIFY || "").toLowerCase() === "true";
+}
+
+function sessionStore() {
+    return getBlobStore(sessionStoreName);
+}
+
+async function saveSession(env, id, session) {
+    if (usesBlobSessions(env)) {
+        await sessionStore().setJSON(id, session);
+        return;
+    }
+    sessions.set(id, session);
+}
+
+async function loadSession(env, id) {
+    if (!id) return null;
+    if (usesBlobSessions(env)) {
+        try {
+            return await sessionStore().get(id, { type: "json", consistency: "strong" });
+        } catch {
+            return null;
+        }
+    }
+    return sessions.get(id) ?? null;
+}
+
+async function removeSession(env, id) {
+    if (usesBlobSessions(env)) {
+        await sessionStore().delete(id).catch(() => {});
+        return;
+    }
+    sessions.delete(id);
 }
 
 async function verifyObject(env, item, label) {

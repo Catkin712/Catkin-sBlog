@@ -16,6 +16,13 @@ pnpm-debug.log*
 
 # local album runtime data
 /data/albums/
+/data/backups/
+
+# Netlify build cache and local-only seed database
+/.netlify/
+/netlify/seed/catkinsblog.sqlite
+/netlify/seed/catkinsblog.sqlite-*
+/netlify/seed/guestbook.json
 
 # environment variables
 .env

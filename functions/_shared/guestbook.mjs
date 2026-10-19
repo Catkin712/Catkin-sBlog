@@ -1,16 +1,22 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdirSync } from "node:fs";
 import path from "node:path";
+import { randomUUID } from "node:crypto";
+import { DatabaseSync } from "node:sqlite";
+import { albumStoragePaths } from "./album-storage.mjs";
 
-const defaultGuestbookPath = path.join(process.cwd(), "data", "guestbook.json");
 const maxNicknameLength = 24;
 const maxContentLength = 120;
 const maxMessages = 160;
+const databases = new Map();
 
 export async function listGuestbookMessages(env = {}) {
-    const messages = await readGuestbookFile(env);
-    return messages
-        .filter((message) => message && message.id && message.content)
-        .sort((a, b) => new Date(b.createdAt).valueOf() - new Date(a.createdAt).valueOf());
+    const db = getDatabase(env);
+    return db.prepare(`
+        SELECT id, nickname, content, created_at AS createdAt
+        FROM guestbook_messages
+        ORDER BY created_at DESC, id DESC
+        LIMIT ?
+    `).all(maxMessages);
 }
 
 export async function addGuestbookMessage(env = {}, payload = {}) {
@@ -21,41 +27,57 @@ export async function addGuestbookMessage(env = {}, payload = {}) {
         throw new Error("留言内容不能为空");
     }
 
-    const messages = await readGuestbookFile(env);
+    const db = getDatabase(env);
     const message = {
-        id: `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
+        id: `${Date.now().toString(36)}-${randomUUID().slice(0, 8)}`,
         nickname,
         content,
         createdAt: new Date().toISOString(),
     };
 
-    messages.unshift(message);
-    await writeGuestbookFile(env, messages.slice(0, maxMessages));
+    db.prepare(`
+        INSERT INTO guestbook_messages (id, nickname, content, created_at)
+        VALUES (?, ?, ?, ?)
+    `).run(message.id, message.nickname, message.content, message.createdAt);
+
+    db.prepare(`
+        DELETE FROM guestbook_messages
+        WHERE id NOT IN (
+            SELECT id FROM guestbook_messages
+            ORDER BY created_at DESC, id DESC
+            LIMIT ?
+        )
+    `).run(maxMessages);
+
     return message;
 }
 
-async function readGuestbookFile(env) {
-    const filePath = guestbookPath(env);
-    try {
-        const text = await readFile(filePath, "utf8");
-        const value = JSON.parse(text);
-        return Array.isArray(value) ? value : [];
-    } catch (error) {
-        if (error.code === "ENOENT") {
-            return [];
-        }
-        throw error;
+function getDatabase(env) {
+    const { databaseFile: defaultDatabaseFile } = albumStoragePaths(env);
+    const databaseFile = path.resolve(env.GUESTBOOK_DB_FILE || env.BLOG_DB_FILE || defaultDatabaseFile);
+    if (databases.has(databaseFile)) {
+        return databases.get(databaseFile);
     }
+
+    mkdirSync(path.dirname(databaseFile), { recursive: true });
+    const db = new DatabaseSync(databaseFile);
+    db.exec(`PRAGMA journal_mode = ${journalMode(env)}; PRAGMA busy_timeout = 5000;`);
+    db.exec(`
+        CREATE TABLE IF NOT EXISTS guestbook_messages (
+            id TEXT PRIMARY KEY,
+            nickname TEXT NOT NULL,
+            content TEXT NOT NULL,
+            created_at TEXT NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS idx_guestbook_created
+            ON guestbook_messages(created_at DESC);
+    `);
+    databases.set(databaseFile, db);
+    return db;
 }
 
-async function writeGuestbookFile(env, messages) {
-    const filePath = guestbookPath(env);
-    await mkdir(path.dirname(filePath), { recursive: true });
-    await writeFile(filePath, `${JSON.stringify(messages, null, 2)}\n`, "utf8");
-}
-
-function guestbookPath(env) {
-    return env.GUESTBOOK_FILE || defaultGuestbookPath;
+function journalMode(env) {
+    return String(env.SQLITE_JOURNAL_MODE || "WAL").toUpperCase() === "DELETE" ? "DELETE" : "WAL";
 }
 
 function normalizeText(value, maxLength) {

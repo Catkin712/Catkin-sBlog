@@ -8,6 +8,6 @@ export async function onRequestPost({ request, env }) {
 
     return jsonResponse({
         ok: true,
-        output: "当前站点已迁移到 Cloudflare Pages Functions，文章更新不需要重新部署。",
+        output: "当前站点已迁移到 Netlify Functions，文章更新会直接写入 Netlify Blobs，不需要重新部署。",
     });
 }

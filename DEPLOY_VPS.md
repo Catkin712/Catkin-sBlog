@@ -1,4 +1,6 @@
-# VPS Deployment
+# VPS Deployment (Legacy)
+
+> **Legacy:** The site is migrating to Netlify. See [DEPLOY_NETLIFY.md](./DEPLOY_NETLIFY.md) for the current deployment. This document is kept for VPS rollback and local development.
 
 This project uses Astro for static assets and Cloudflare Pages-style functions for the home page, posts, tags, categories, RSS, search, and admin APIs.
 

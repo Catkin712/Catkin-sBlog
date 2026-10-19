@@ -249,7 +249,8 @@ function getDatabase(env) {
 
     mkdirSync(path.dirname(databaseFile), { recursive: true });
     const db = new DatabaseSync(databaseFile);
-    db.exec("PRAGMA foreign_keys = ON; PRAGMA journal_mode = WAL; PRAGMA busy_timeout = 5000;");
+    const journalMode = String(env.SQLITE_JOURNAL_MODE || "WAL").toUpperCase() === "DELETE" ? "DELETE" : "WAL";
+    db.exec(`PRAGMA foreign_keys = ON; PRAGMA journal_mode = ${journalMode}; PRAGMA busy_timeout = 5000;`);
     db.exec(`
         CREATE TABLE IF NOT EXISTS posts (
             slug TEXT PRIMARY KEY,
