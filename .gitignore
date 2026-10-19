@@ -28,8 +28,13 @@ pnpm-debug.log*
 .env
 .env.local
 .env.production
+.env.netlify
+.env.netlify.*
 .dev.vars
 .dev.vars.*
+
+# local deployment archive
+/catkinsblog-vps.tar.gz
 
 # macOS-specific files
 .DS_Store
