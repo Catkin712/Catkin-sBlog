@@ -1,0 +1,43 @@
+---
+import Header from "../components/Header.astro";
+import Footer from "../components/Footer.astro";
+import RightSidebar from "../components/RightSidebar.astro";
+import "../style/global.css";
+const {
+    pageTitle,
+    description = "Catkin's Blog 是一个记录技术学习、生活观察和个人内容的轻量博客。",
+    showPageTitle = true,
+} = Astro.props;
+---
+
+<html lang="zh-CN">
+    <head>
+        <meta charset="utf-8" />
+        <link rel="icon" type="image/png" href="/avatar.png" />
+        <link rel="apple-touch-icon" href="/avatar.png" />
+        <meta name="viewport" content="width=device-width" />
+        <meta name="description" content={description} />
+        <meta name="generator" content={Astro.generator} />
+        <title>{pageTitle}</title>
+        <link
+            rel="stylesheet"
+            href="https://cdn.jsdelivr.net/npm/katex@0.17.0/dist/katex.min.css"
+            crossorigin="anonymous"
+        />
+    </head>
+    <body>
+        <div class="site-shell">
+            <Header />
+            <main class="site-main">
+                {showPageTitle && <h1>{pageTitle}</h1>}
+                <slot />
+                <Footer />
+            </main>
+            <RightSidebar />
+        </div>
+        <script>
+            import "../script/menu.js";
+            import "../script/search.js";
+        </script>
+    </body>
+</html>

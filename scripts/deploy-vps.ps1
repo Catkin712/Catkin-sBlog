@@ -1,0 +1,81 @@
+param(
+    [string]$SshHost = "catkinblog",
+    [string]$RemoteDir = "/var/www/catkinsblog",
+    [string]$ArchiveName = "catkinsblog-vps.tar.gz",
+    [string]$Pm2Name = "catkinsblog"
+)
+
+$ErrorActionPreference = "Stop"
+
+$ProjectRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
+$ArchivePath = Join-Path ([System.IO.Path]::GetTempPath()) $ArchiveName
+
+function Step($Message) {
+    Write-Host ""
+    Write-Host "==> $Message" -ForegroundColor Cyan
+}
+
+function Run($Command, $Arguments, $WorkingDirectory = $ProjectRoot) {
+    Push-Location $WorkingDirectory
+    try {
+        & $Command @Arguments
+        if ($LASTEXITCODE -ne 0) {
+            throw "$Command failed with exit code $LASTEXITCODE"
+        }
+    } finally {
+        Pop-Location
+    }
+}
+
+function Quote-Sh($Value) {
+    return "'" + ($Value -replace "'", "'`"`"'`"`"'") + "'"
+}
+
+Step "Checking SSH connection"
+Run "ssh" @($SshHost, "echo connected")
+
+Step "Building locally"
+Run "npm" @("run", "build")
+
+Step "Packing project"
+if (Test-Path $ArchivePath) {
+    Remove-Item -LiteralPath $ArchivePath -Force
+}
+Run "tar" @(
+    "--exclude=node_modules",
+    "--exclude=.git",
+    "--exclude=.env",
+    "--exclude=.env.local",
+    "--exclude=.env.production",
+    "--exclude=data",
+    "--exclude=dist",
+    "--exclude=.astro",
+    "--exclude=.wrangler",
+    "--exclude=catkinsblog-vps.tar.gz",
+    "--exclude=$ArchiveName",
+    "-czf",
+    $ArchivePath,
+    "."
+)
+
+Step "Uploading archive"
+Run "scp" @($ArchivePath, "${SshHost}:${RemoteDir}/")
+
+Step "Deploying on server"
+$remoteDirArg = Quote-Sh $RemoteDir
+$archiveNameArg = Quote-Sh $ArchiveName
+$pm2NameArg = Quote-Sh $Pm2Name
+$remoteScript = @(
+    "cd $remoteDirArg",
+    "tar -xzf $archiveNameArg",
+    "npm install",
+    "npm run build",
+    "npm run migrate:bingxi",
+    "(pm2 restart $pm2NameArg --update-env || pm2 start npm --name $pm2NameArg -- start)",
+    "pm2 save"
+) -join " && "
+
+Run "ssh" @($SshHost, $remoteScript)
+
+Step "Deployment finished"
+Write-Host "Open: https://www.catkins.vip/" -ForegroundColor Green

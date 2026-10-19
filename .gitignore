@@ -1,0 +1,42 @@
+# build output
+dist/
+.wrangler/
+
+# generated types
+.astro/
+
+# dependencies
+node_modules/
+
+# logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# local album runtime data
+/data/albums/
+/data/backups/
+
+# Netlify build cache and local-only seed database
+/.netlify/
+/netlify/seed/catkinsblog.sqlite
+/netlify/seed/catkinsblog.sqlite-*
+/netlify/seed/guestbook.json
+
+# environment variables
+.env
+.env.local
+.env.production
+.dev.vars
+.dev.vars.*
+
+# macOS-specific files
+.DS_Store
+
+# jetbrains setting folder
+.idea/
+
+# local deployment archive
+/catkinsblog-vps.tar.gz
+

@@ -1,0 +1,197 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+const pageTitle = "关于 Catkin";
+
+const identity = {
+    firstName: "Willow_Catkin",
+    country: "中国",
+    occupation: "学生",
+    hobbies: ["摄影", "观鸟", "棒球"],
+    ages: 18,
+    birth: "7-12",
+};
+
+const skills = [
+    {
+        name: "Astro",
+        detail: "核心框架 v7.0.3",
+        description: "负责静态页面生成、路由和内容集合。",
+    },
+    {
+        name: "TypeScript",
+        detail: "语言与类型",
+        description: "为页面逻辑和内容结构提供基础约束。",
+    },
+    {
+        name: "原生 CSS",
+        detail: "样式系统",
+        description: "保持轻量，不额外引入大型 UI 框架。",
+    },
+    {
+        name: "Content Collections",
+        detail: "文章管理",
+        description: "统一校验本地 Markdown frontmatter。",
+    },
+    {
+        name: "GitHub",
+        detail: "源码仓库",
+        description: "保存项目源码与部署脚本。",
+    },
+    {
+        name: "腾讯云 COS",
+        detail: "对象存储",
+        description: "存储文章封面、正文图片、相册照片和头像。",
+    },
+    {
+        name: "SQLite",
+        detail: "数据存储",
+        description: "保存文章、相册以及点赞和评论等互动数据。",
+    },
+    {
+        name: "VPS + PM2",
+        detail: "线上运行",
+        description: "运行 Node 服务和动态 API，并管理生产进程。",
+    },
+];
+
+const platforms = [
+    {
+        name: "洛谷",
+        username: "457623",
+        url: "https://www.luogu.com.cn/user/457623",
+        description: "算法练习与竞赛记录。",
+    },
+    {
+        name: "GitHub",
+        username: "Catkin712",
+        url: "https://github.com/Catkin712",
+        description: "代码项目与博客源码。",
+    },
+];
+---
+
+<BaseLayout pageTitle={pageTitle}>
+    <section class="about-hero">
+        <p class="eyebrow">Catkin's Blog</p>
+        <h2>这是 Catkin 的个人内容站</h2>
+        <p>
+            {identity.firstName}, {identity.occupation}
+        </p>
+    </section>
+
+    <section class="about-section" aria-labelledby="tech-stack-title">
+        <div class="section-heading">
+            <p class="eyebrow">Stack</p>
+            <h2 id="tech-stack-title">技术栈</h2>
+        </div>
+        <div class="card-grid">
+            {
+                skills.map((skill) => (
+                    <article class="info-card">
+                        <p class="card-label">{skill.detail}</p>
+                        <h3>{skill.name}</h3>
+                        <p>{skill.description}</p>
+                    </article>
+                ))
+            }
+        </div>
+    </section>
+
+    <section class="about-section" aria-labelledby="platform-title">
+        <div class="section-heading">
+            <p class="eyebrow">Elsewhere</p>
+            <h2 id="platform-title">其他平台账号</h2>
+        </div>
+        <div class="card-grid account-grid">
+            {
+                platforms.map((platform) => (
+                    <a class="info-card account-card" href={platform.url}>
+                        <p class="card-label">{platform.name}</p>
+                        <h3>{platform.username}</h3>
+                        <p>{platform.description}</p>
+                    </a>
+                ))
+            }
+        </div>
+    </section>
+</BaseLayout>
+
+<style>
+    .about-hero {
+        margin-bottom: 2rem;
+        border: 1px solid var(--line-color);
+        border-radius: 8px;
+        background: var(--panel-bg);
+        padding: 1.5rem;
+    }
+
+    .about-hero h2,
+    .section-heading h2,
+    .info-card h3 {
+        margin: 0;
+    }
+
+    .about-hero p:last-child {
+        margin-bottom: 0;
+        color: var(--muted-color);
+    }
+
+    .about-section {
+        margin-top: 2rem;
+    }
+
+    .section-heading {
+        margin-bottom: 1rem;
+    }
+
+    .eyebrow,
+    .card-label {
+        margin: 0 0 0.35rem;
+        color: var(--accent-color);
+        font-size: 0.8rem;
+        font-weight: 800;
+        text-transform: uppercase;
+    }
+
+    .card-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.9rem;
+    }
+
+    .info-card {
+        display: block;
+        min-height: 145px;
+        border: 1px solid var(--line-color);
+        border-radius: 8px;
+        background: var(--panel-bg);
+        padding: 1rem;
+        color: inherit;
+        text-decoration: none;
+    }
+
+    .info-card h3 {
+        font-size: 1.15rem;
+    }
+
+    .info-card p:last-child {
+        margin-bottom: 0;
+        color: var(--muted-color);
+    }
+
+    .account-card:hover,
+    .account-card:focus {
+        border-color: var(--accent-color);
+        transform: translateY(-2px);
+    }
+
+    @media screen and (max-width: 760px) {
+        .card-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .about-hero {
+            padding: 1rem;
+        }
+    }
+</style>

@@ -1,0 +1,40 @@
+{
+  "name": "d-catkin-sblog",
+  "type": "module",
+  "version": "0.0.1",
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "scripts": {
+    "dev": "astro dev",
+    "admin": "node scripts/admin-server.mjs",
+    "build": "astro build",
+    "start": "node server.mjs",
+    "deploy:vps": "powershell -ExecutionPolicy Bypass -File scripts/deploy-vps.ps1",
+    "migrate:bingxi": "node scripts/import-bingxi-articles.mjs",
+    "migrate:luogu": "node scripts/import-luogu-articles.mjs",
+    "preview": "astro preview",
+    "netlify:build": "netlify build",
+    "netlify:dev": "netlify dev",
+    "netlify:deploy": "netlify deploy --build --prod",
+    "netlify:encrypt-seed": "node scripts/encrypt-netlify-seed.mjs netlify/seed/catkinsblog.sqlite netlify/seed/catkinsblog.sqlite.enc",
+    "netlify:test": "node scripts/test-netlify-runtime.mjs",
+    "netlify:backup": "node scripts/backup-netlify-db.mjs",
+    "pages:dev": "npm run build && npx wrangler pages dev dist",
+    "pages:deploy": "npm run build && npx wrangler pages deploy dist",
+    "astro": "astro"
+  },
+  "dependencies": {
+    "@astrojs/markdown-remark": "^7.2.0",
+    "@astrojs/preact": "^6.0.1",
+    "@netlify/blobs": "^11.1.4",
+    "astro": "^7.0.3",
+    "busboy": "^1.6.0",
+    "katex": "^0.17.0",
+    "marked": "^18.0.6",
+    "marked-katex-extension": "^5.1.10",
+    "preact": "^10.29.7",
+    "rehype-katex": "^7.0.1",
+    "remark-math": "^6.0.0"
+  }
+}
