@@ -69,6 +69,7 @@ $remoteScript = @(
     "cd $remoteDirArg",
     "tar -xzf $archiveNameArg",
     "npm install",
+    "npm run migrate:luogu",
     "npm run build",
     "npm run migrate:bingxi",
     "(pm2 restart $pm2NameArg --update-env || pm2 start npm --name $pm2NameArg -- start)",
